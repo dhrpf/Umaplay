@@ -185,7 +185,15 @@ im going to try it out with air grove and see what happens
 vestovia — Yesterday at 7:37
 hi! thank you for the umaplay bot, i understand you avoid emulators due to the inherent risk, but just wondering if adb support or support for other emulators is in the plans? im currently using mumuplayer for the 60fps+ as sometimes i play manually and i think it also might allow it to run in the background like uat? though i think i can use rdp for the meantime but it would be nice. thank you again!
 
-0.5.2
+EpharGy — 0:11
+Any thoughts on making presets more modular? or giving the ability to use a full preset or a modular one?
+ie Character, Race Style, Race Length, Other (CM specific or other skills)?
+for example, it's pretty tedious to switch out skills for different Styles and CM's
+
+could then mix and match as needed
+Maybe not even make predefined modules, but just have it so you can load multiple preset files and it will basically join them,  could leave it up to the user on what details they add in what presets. May need to de-duplicate or look for clashes, or maybe just prioritize based on load order?
+
+### 0.5.2
 support friend bar when overlapped by support_hint, make sure we don't confuse colors or classification
 new library, try to handle autoinstall
 
