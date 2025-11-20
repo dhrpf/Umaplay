@@ -5,6 +5,7 @@ from time import sleep
 from typing import Any, Dict, List
 
 from core.actions.training_policy import check_training
+from core.actions.skills import SkillsBuyStatus
 from core.types import TrainAction
 from core.actions.ura.lobby import LobbyFlowURA
 from core.controllers.base import IController
@@ -332,15 +333,26 @@ class AgentURA(AgentScenario):
                     if should_open_skills or self._first_race_day:
                         self._first_race_day = False
                         self.lobby._go_skills()
-                        bought = self.skills_flow.buy(self.skill_list)
-                        self._last_skill_buy_succeeded = bool(bought)
+                        skills_result = self.skills_flow.buy(self.skill_list)
+                        self._last_skill_buy_succeeded = (
+                            skills_result.status is SkillsBuyStatus.SUCCESS
+                        )
                         self._last_skill_pts_seen = int(self.lobby.state.skill_pts)
                         self._last_skill_check_turn = (
                             current_turn
                             if current_turn >= 0
                             else self._last_skill_check_turn
                         )
-                        logger_uma.info(f"[agent] Skills bought: {bought}")
+                        logger_uma.info(
+                            "[agent] Skills buy result: %s (exit_recovered=%s)",
+                            skills_result.status.value,
+                            skills_result.exit_recovered,
+                        )
+                        if not skills_result.exited_cleanly:
+                            logger_uma.warning(
+                                "[agent] Skills exit not confirmed; retrying loop before racing."
+                            )
+                            continue
                     else:
                         # Track last seen points even when skipping
                         self._last_skill_pts_seen = int(self.lobby.state.skill_pts)
@@ -377,7 +389,12 @@ class AgentURA(AgentScenario):
                         reason="Pre-debut (race day)",
                     )
                     if not ok:
-                        raise RuntimeError("Couldn't race")
+                        reason_tag = getattr(self.race, "_last_failure_reason", None)
+                        logger_uma.error(
+                            "[race] Couldn't race on pre-debut day (failure=%s)",
+                            getattr(reason_tag, "value", str(reason_tag) or "unknown"),
+                        )
+                        continue
                     # Mark raced on current date-key to avoid double-race if date OCR doesn't tick
                     self.lobby.mark_raced_today(self._today_date_key())
                     continue
@@ -389,7 +406,12 @@ class AgentURA(AgentScenario):
                         reason="Normal (race day)",
                     )
                     if not ok:
-                        raise RuntimeError("Couldn't race")
+                        reason_tag = getattr(self.race, "_last_failure_reason", None)
+                        logger_uma.error(
+                            "[race] Couldn't race on normal race day (failure=%s)",
+                            getattr(reason_tag, "value", str(reason_tag) or "unknown"),
+                        )
+                        continue
                     self.lobby.mark_raced_today(self._today_date_key())
                     continue
 
@@ -534,9 +556,15 @@ class AgentURA(AgentScenario):
                 # Only if skill list defined
                 if len(self.skill_list) > 0 and self.lobby._go_skills():
                     sleep(1.0)
-                    bought = self.skills_flow.buy(self.skill_list)
-                    self._last_skill_buy_succeeded = bool(bought)
-                    logger_uma.info(f"[agent] Skills bought: {bought}")
+                    final_result = self.skills_flow.buy(self.skill_list)
+                    self._last_skill_buy_succeeded = (
+                        final_result.status is SkillsBuyStatus.SUCCESS
+                    )
+                    logger_uma.info(
+                        "[agent] Final screen skills result: %s (exit_recovered=%s)",
+                        final_result.status.value,
+                        final_result.exit_recovered,
+                    )
                     
                     # pick = det_filter(dets, ["lobby_skills"])[-1]
                     # x1 = pick["xyxy"][0]

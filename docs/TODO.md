@@ -8,6 +8,8 @@ This organizes the mixed notes into a clear, actionable backlog. Items are group
 
 ### 0.4.1
 
+Bug ADB LDPlayer: couldn't scroll through races
+
 github issues
 
 Dummiez
