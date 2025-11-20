@@ -14,6 +14,8 @@ from PIL import Image
 import cv2
 import json
 from pathlib import Path
+from dataclasses import dataclass
+from enum import Enum
 import imagehash
 from core.utils.img import to_bgr
 
@@ -40,6 +42,17 @@ class ConsecutiveRaceRefused(Exception):
     pass
 
 
+class RaceFailureReason(Enum):
+    NONE = "none"
+    NAV_CONSECUTIVE_REFUSED = "nav_consecutive_refused"
+    NO_RACE_SQUARE = "no_race_square"
+    RACE_BUTTON_LIST_MISSING = "race_button_list_missing"
+    ABORT_DURING_POPUP = "abort_during_popup"
+    ABORT_DURING_LOBBY_WAIT = "abort_during_lobby_wait"
+    PRE_LOBBY_TIMEOUT = "pre_lobby_timeout"
+    LOBBY_FLOW_FAILED = "lobby_flow_failed"
+
+
 class RaceFlow:
     """
     Clean, modular Race flow:
@@ -64,6 +77,7 @@ class RaceFlow:
             "wins_or_no_loss": 0,
         }
         self._waiting_for_manual_retry_decision = False
+        self._last_failure_reason: RaceFailureReason = RaceFailureReason.NONE
 
     def _ensure_in_raceday(
         self, *, reason: str | None = None, from_raceday=False
@@ -665,13 +679,26 @@ class RaceFlow:
                     need_click = False
                 return best_non_g1, need_click
 
+            # Use the first visible square as scroll anchor so drags start on the race list
+            anchor_xy = None
+            if squares:
+                try:
+                    anchor_xy = self.ctrl.center_from_xyxy(tuple(squares[0]["xyxy"]))
+                    logger_uma.debug(
+                        "[race] scroll anchor from first square: anchor_xy=%s bbox=%s",
+                        anchor_xy,
+                        squares[0]["xyxy"],
+                    )
+                except Exception as e:
+                    logger_uma.debug("[race] failed to compute scroll anchor: %s", e)
+
             if squares and not moved_cursor:
                 self.ctrl.move_xyxy_center(squares[0]["xyxy"])
                 time.sleep(0.10)
                 moved_cursor = True
 
             # probe next batch
-            smart_scroll_small(self.ctrl, steps_pc=4)
+            smart_scroll_small(self.ctrl, steps_pc=4, anchor_xy=anchor_xy)
             did_scroll = True
             time.sleep(0.35)
 
@@ -1071,8 +1098,9 @@ class RaceFlow:
           - if from_raceday == True → raise ConsecutiveRaceRefused
           - else → return False (let caller continue with its skip logic)
         """
-        # Reset manual retry decision flag at the start of a new race
+        # Reset manual retry decision flag and last failure reason at the start of a new race
         self._waiting_for_manual_retry_decision = False
+        self._last_failure_reason = RaceFailureReason.NONE
         
         logger_uma.info(
             "[race] RaceDay begin (prioritize_g1=%s, is_g1_goal=%s)%s",
@@ -1087,6 +1115,7 @@ class RaceFlow:
                 logger_uma.info(
                     "[race] Returning False due to refused consecutive race (non-Raceday caller)."
                 )
+                self._last_failure_reason = RaceFailureReason.NAV_CONSECUTIVE_REFUSED
                 return False
 
         time.sleep(2)
@@ -1100,6 +1129,7 @@ class RaceFlow:
         )
         if square is None:
             logger_uma.debug("race square not found")
+            self._last_failure_reason = RaceFailureReason.NO_RACE_SQUARE
             return False
 
         # 2) Click the race square
@@ -1117,6 +1147,7 @@ class RaceFlow:
             tag="race_list_race",
         ):
             logger_uma.warning("[race] couldn't find green 'Race' button (list).")
+            self._last_failure_reason = RaceFailureReason.RACE_BUTTON_LIST_MISSING
             return False
 
         # Time to popup to grow, so we don't missclassify a mini button in the animation
@@ -1126,6 +1157,7 @@ class RaceFlow:
         while (time.time() - t0) < 5.0:
             if abort_requested():
                 logger_uma.info("[race] Abort requested before popup confirm.")
+                self._last_failure_reason = RaceFailureReason.ABORT_DURING_POPUP
                 return False
             if self.waiter.seen(
                 classes=("button_change",), tag="race_pre_lobby_seen_early"
@@ -1151,15 +1183,23 @@ class RaceFlow:
         time.sleep(7)
         t0 = time.time()
         max_wait = 14.0
+        saw_pre_lobby = False
         while (time.time() - t0) < max_wait:
             if abort_requested():
                 logger_uma.info(
                     "[race] Abort requested while waiting for pre-race lobby."
                 )
+                self._last_failure_reason = RaceFailureReason.ABORT_DURING_LOBBY_WAIT
                 return False
             if self.waiter.seen(classes=("button_change",), tag="race_pre_lobby_gate"):
+                saw_pre_lobby = True
                 break
             time.sleep(0.15)
+
+        if not saw_pre_lobby:
+            logger_uma.warning("[race] Pre-race lobby not detected within timeout.")
+            self._last_failure_reason = RaceFailureReason.PRE_LOBBY_TIMEOUT
+            return False
 
         # 5) Optional: set strategy as soon as the Change button is available (no extra sleeps)
         if select_style and self.waiter.seen(
@@ -1170,4 +1210,10 @@ class RaceFlow:
             time.sleep(3)  # wait for white buttons to dissapear
 
         # 6) Proceed with the result/lobby handling pipeline
-        return self.lobby()
+        lobby_ok = self.lobby()
+        if not lobby_ok:
+            self._last_failure_reason = RaceFailureReason.LOBBY_FLOW_FAILED
+            return False
+
+        self._last_failure_reason = RaceFailureReason.NONE
+        return True
