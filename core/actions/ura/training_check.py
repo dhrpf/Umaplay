@@ -329,10 +329,10 @@ def compute_support_values(training_state: List[Dict]) -> List[Dict[str, Any]]:
             risk_mult = 2.0
         elif sv_total >= 3.5 and not (has_hint and Settings.HINT_IS_IMPORTANT):
             # cap if hint is overcalculating
-            risk_mult = 2.0
+            risk_mult = 1.5
         elif sv_total >= 2.75 and not (has_hint and Settings.HINT_IS_IMPORTANT):
             # cap if hint is overcalculating
-            risk_mult = 1.5
+            risk_mult = 1.35
         elif sv_total >= 2.25:
             risk_mult = 1.25
         else:

@@ -190,12 +190,30 @@ class Waiter:
 
                 # 3) OCR disambiguation by positive `texts` (ignoring forbiddens)
                 if texts and self.ocr:
-                    pick = self._pick_by_text(
-                        img, cand, texts, threshold, forbid_texts, forbid_threshold
+                    pick, pick_score = self._pick_by_text(
+                        img,
+                        cand,
+                        texts,
+                        threshold,
+                        forbid_texts,
+                        forbid_threshold,
                     )
                     if pick is not None:
+                        logger_uma.debug(
+                            "[waiter] text match (tag=%s) score=%.2f target_texts=%s",
+                            tag,
+                            pick_score,
+                            texts,
+                        )
                         self.ctrl.click_xyxy_center(pick["xyxy"], clicks=clicks)
                         return (True, pick) if return_object else True
+                    else:
+                        logger_uma.debug(
+                            "[waiter] text match miss (tag=%s) best_score=%.2f target_texts=%s",
+                            tag,
+                            pick_score,
+                            texts,
+                        )
                     # If OCR didn't reach threshold or all candidates were forbidden, continue polling.
 
             if (time.time() - t0) >= timeout:
@@ -308,12 +326,23 @@ class Waiter:
 
         # 3) OCR disambiguation
         if texts and self.ocr:
-            pick = self._pick_by_text(
+            pick, pick_score = self._pick_by_text(
                 img, cand, texts, threshold, forbid_texts, forbid_threshold
             )
             if pick is not None:
+                logger_uma.debug(
+                    "[waiter] try_click text match score=%.2f target_texts=%s",
+                    pick_score,
+                    texts,
+                )
                 self.ctrl.click_xyxy_center(pick["xyxy"], clicks=clicks)
                 return True
+            else:
+                logger_uma.debug(
+                    "[waiter] try_click text miss best_score=%.2f target_texts=%s",
+                    pick_score,
+                    texts,
+                )
 
         return False
 
@@ -350,7 +379,14 @@ class Waiter:
         if not txt:
             return False
         for ft in forbid_texts:
-            if fuzzy_ratio(txt, ft) >= forbid_threshold:
+            score = fuzzy_ratio(txt, ft)
+            if score >= forbid_threshold:
+                logger_uma.debug(
+                    "[waiter] candidate forbidden text match score=%.2f text=%s forbid=%s",
+                    score,
+                    txt,
+                    ft,
+                )
                 return True
         return False
 
@@ -362,7 +398,7 @@ class Waiter:
         threshold: float,
         forbid_texts: Optional[List[str]] = None,
         forbid_threshold: float = 0.65,
-    ) -> Optional[DetectionDict]:
+    ) -> Tuple[Optional[DetectionDict], float]:
         """
         OCR candidates and pick the one whose text best matches any of `texts`,
         ignoring any candidate that matches `forbid_texts`.
@@ -370,7 +406,7 @@ class Waiter:
         """
         norm_texts = self._norm_seq(texts)
         if not norm_texts or not self.ocr:
-            return None
+            return None, 0.0
 
         best_d, best_s = None, 0.0
         for d in cand:
@@ -397,8 +433,8 @@ class Waiter:
                 best_d, best_s = d, s
 
         if best_d is not None and best_s >= threshold:
-            return best_d
-        return None
+            return best_d, best_s
+        return None, best_s
 
     @staticmethod
     def _pick(value, default):
