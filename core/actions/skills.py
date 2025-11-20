@@ -689,13 +689,19 @@ class SkillsFlow:
             time.sleep(0.15)
         elif isinstance(self.ctrl, ADBController):
             # Reuse smart_scroll_small for ADB so we get anchor-aware drags
+            anchor_xy = None
+            xywh = self.ctrl._client_bbox_screen_xywh()
+            if xywh:
+                x, y, w, h = xywh
+                anchor_xy = (x + w // 2, y + h // 2)
             smart_scroll_small(
                 self.ctrl,
                 steps_android=2,
-                fraction_android=0.30,
+                fraction_android=0.18,
                 settle_pre_s=0.02,
                 settle_mid_s=0.05,
                 settle_post_s=0.15,
+                anchor_xy=anchor_xy,
             )
         elif isinstance(self.ctrl, BlueStacksController):
             xywh = self.ctrl._client_bbox_screen_xywh()
@@ -706,7 +712,7 @@ class SkillsFlow:
             self.ctrl.move_to(cx, cy)
             time.sleep(0.25)
             self.ctrl.scroll(
-                -int(h * 0.18),
+                -int(h * 0.15),
                 steps=2,
                 duration_range=(0.22, 0.40),
                 end_hold_range=(0.15, 0.30),

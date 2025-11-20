@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 
 from core.controllers.adb import ADBController
 from core.controllers.android import ScrcpyController  # type check only
+from core.controllers.bluestacks import BlueStacksController
 from core.controllers.base import IController
 from core.controllers.steam import SteamController
 from core.utils.logger import logger_uma
@@ -58,9 +59,9 @@ def smart_scroll_small(
         ctrl.move_to(*target_anchor)
         time.sleep(settle_mid_s)
 
-    if isinstance(ctrl, ScrcpyController):
+    if isinstance(ctrl, (ScrcpyController, BlueStacksController)):
         if not xywh:
-            logger_uma.debug("[pointer] no client bbox for Scrcpy scroll; skipping")
+            logger_uma.debug("[pointer] no client bbox for Scrcpy/BlueStacks scroll; skipping")
             time.sleep(settle_post_s)
             return
 
