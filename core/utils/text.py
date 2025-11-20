@@ -137,39 +137,35 @@ def fuzzy_contains(
     nd = _normalize_ocr(needle)
     if not nd:
         if return_ratio:
-            return False, 0
+            return False, 0.0
         return False
 
     # direct substring after normalization
     if nd in hs:
         if return_ratio:
-            return True, 1
+            return True, 1.0
         return True
 
-    # character-level sliding window around the same length
-    n = len(nd)
-    if n == 0 or len(hs) < n:
-        swap = hs
-        hs = nd
-        nd = swap
-
-    sm = SequenceMatcher()
-    sm.set_seq2(nd)
-    # try windows of length n and n+1 (helps when OCR inserts/drops a char)
-    for win_len in (n, n + 1):
-        if win_len > len(hs):
-            continue
-        for i in range(0, len(hs) - win_len + 1):
-            window = hs[i : i + win_len]
-            sm.set_seq1(window)
-            ratio = sm.ratio()
-            if ratio >= threshold:
-                if return_ratio:
-                    return True, ratio
-                return True
+    # Token-level fuzzy match to avoid cross-word artefacts.
+    tokens = hs.split()
+    if not tokens:
+        if return_ratio:
+            return False, 0.0
+        return False
 
     if return_ratio:
-        return False, 0
+        best = 0.0
+        for tok in tokens:
+            r = SequenceMatcher(None, tok, nd).ratio()
+            if r > best:
+                best = r
+            if r >= threshold:
+                return True, r
+        return False, best
+
+    for tok in tokens:
+        if SequenceMatcher(None, tok, nd).ratio() >= threshold:
+            return True
     return False
 
 

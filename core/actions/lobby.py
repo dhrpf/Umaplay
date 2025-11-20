@@ -1059,23 +1059,23 @@ class LobbyFlow(ABC):
         
         # Detect "Win Maiden race" or similar race-winning goals
         critical_goal_win_race = (
-            fuzzy_contains(goal, "win", 0.58)
-            and fuzzy_contains(goal, "maiden", 0.58)
-            and fuzzy_contains(goal, "race", 0.58)
+            fuzzy_contains(goal, "win", 0.7)
+            and fuzzy_contains(goal, "maiden", 0.7)
+            and fuzzy_contains(goal, "race", 0.7)
         )
         
         critical_goal_fans = there_is_progress_text or critical_goal_win_race or (
-            fuzzy_contains(goal, "go", 0.58)
-            and fuzzy_contains(goal, "fan", 0.58)
-            and not fuzzy_contains(goal, "achieve", 0.58)
+            fuzzy_contains(goal, "go", 0.7)
+            and fuzzy_contains(goal, "fan", 0.7)
+            and not fuzzy_contains(goal, "achieve", 0.7)
         )
         critical_goal_g1 = there_is_progress_text and (
-            (fuzzy_contains(goal, "g1", 0.58) or fuzzy_contains(goal, "gl", 0.58))
-            or fuzzy_contains(goal, "place within", 0.58)
+            (fuzzy_contains(goal, "g1", 0.7) or fuzzy_contains(goal, "gl", 0.7))
+            or fuzzy_contains(goal, "place within", 0.7)
             or (
-                fuzzy_contains(goal, "place", 0.58)
-                and fuzzy_contains(goal, "top", 0.58)
-                and fuzzy_contains(goal, "time", 0.58)
+                fuzzy_contains(goal, "place", 0.7)
+                and fuzzy_contains(goal, "top", 0.7)
+                and fuzzy_contains(goal, "time", 0.7)
             )
         )
 
