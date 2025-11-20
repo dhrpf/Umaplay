@@ -166,6 +166,7 @@ def fuzzy_contains(
             if ratio >= threshold:
                 if return_ratio:
                     return True, ratio
+                return True
 
     if return_ratio:
         return False, 0
