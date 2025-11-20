@@ -240,6 +240,7 @@ class AgentURA(AgentScenario):
                     continue
 
             if screen == "Event":
+                sleep(0.5)
                 self.claw_turn = 0
                 # Reset counters when we have proper event screen with multiple options
                 self._single_event_option_counter = 0

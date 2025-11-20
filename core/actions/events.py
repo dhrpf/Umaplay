@@ -600,7 +600,7 @@ class EventFlow:
             return self._fallback_click_top(choices_sorted, debug)
 
         target = choices_sorted[pick - 1]
-        self.ctrl.click_xyxy_center(target["xyxy"], clicks=1)
+        self.ctrl.click_xyxy_center(target["xyxy"], clicks=2)
         
         # Update last event state for confirmation phase detection
         self._last_event_clicked = (best.rec.key_step, pick, expected_n)
