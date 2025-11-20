@@ -147,6 +147,13 @@ class AgentUnityCup(AgentScenario):
                 self._consecutive_event_stale_clicks = 0
 
             if unknown_screen:
+                # Check if race flow is waiting for manual retry decision
+                if hasattr(self, 'race') and self.race._waiting_for_manual_retry_decision:
+                    logger_uma.warning(
+                        "[agent] Waiting for manual retry decision. Skipping all button clicks."
+                    )
+                    sleep(1.0)
+                    continue
                 # Reset event stale counters when on unknown screen
                 self._single_event_option_counter = 0
 
@@ -405,7 +412,7 @@ class AgentUnityCup(AgentScenario):
                         reason="Pre-debut (race day)",
                     )
                     if not ok:
-                        raise RuntimeError("Couldn't race")
+                        raise RuntimeError("Couldn't race or stopped due to dangerouse action")
                     # Mark raced on current date-key to avoid double-race if date OCR doesn't tick
                     self.lobby.mark_raced_today(self._today_date_key())
                     continue
@@ -417,7 +424,7 @@ class AgentUnityCup(AgentScenario):
                         reason="Normal (race day)",
                     )
                     if not ok:
-                        raise RuntimeError("Couldn't race")
+                        raise RuntimeError("Couldn't race or stopped due to dangerouse action")
                     self.lobby.mark_raced_today(self._today_date_key())
                     continue
             

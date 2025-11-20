@@ -137,6 +137,13 @@ class AgentURA(AgentScenario):
                 self._consecutive_event_stale_clicks = 0
 
             if unknown_screen:
+                # Check if race flow is waiting for manual retry decision
+                if hasattr(self, 'race') and self.race._waiting_for_manual_retry_decision:
+                    logger_uma.warning(
+                        "[agent] Waiting for manual retry decision. Skipping all button clicks."
+                    )
+                    sleep(1.0)
+                    continue
                 # Reset event stale counters when on unknown screen
                 self._single_event_option_counter = 0
                 threshold = 0.65

@@ -63,6 +63,7 @@ class RaceFlow:
             "retry_skipped": 0,
             "wins_or_no_loss": 0,
         }
+        self._waiting_for_manual_retry_decision = False
 
     def _ensure_in_raceday(
         self, *, reason: str | None = None, from_raceday=False
@@ -847,7 +848,7 @@ class RaceFlow:
             classes=("button_green",),
             texts=("TRY AGAIN",),
             tag="race_try_again_probe",
-            threshold=0.62,
+            threshold=0.3,
         )
         if loss_indicator_seen:
             self._race_result_counters["loss_indicators"] += 1
@@ -870,6 +871,7 @@ class RaceFlow:
             logger_uma.warning(
                 "[race] Stopping bot so user can choose Try Again or Cancel manually."
             )
+            self._waiting_for_manual_retry_decision = True
             request_abort()
             return False
 
@@ -1069,6 +1071,9 @@ class RaceFlow:
           - if from_raceday == True → raise ConsecutiveRaceRefused
           - else → return False (let caller continue with its skip logic)
         """
+        # Reset manual retry decision flag at the start of a new race
+        self._waiting_for_manual_retry_decision = False
+        
         logger_uma.info(
             "[race] RaceDay begin (prioritize_g1=%s, is_g1_goal=%s)%s",
             prioritize_g1,
