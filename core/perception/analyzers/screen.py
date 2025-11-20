@@ -2,6 +2,7 @@
 from collections import Counter
 from typing import Dict, List, Optional, Tuple
 
+from core.settings import Settings
 from core.types import DetectionDict, ScreenInfo, ScreenName
 
 
@@ -211,53 +212,75 @@ def classify_screen_unity_cup(
         if d["name"] == names_map["training_button"] and d["conf"] >= training_conf
     )
 
-    has_tazuna = any(
-        d["name"] == names_map["tazuna"] and d["conf"] >= lobby_conf for d in dets
+    def _any_conf(name: str, threshold: float) -> bool:
+        return any(
+            d["name"] == name and float(d.get("conf", 0.0)) >= threshold for d in dets
+        )
+
+    def _collect(name: str) -> List[DetectionDict]:
+        return [d for d in dets if d["name"] == name]
+
+    has_tazuna = _any_conf(names_map["tazuna"], lobby_conf)
+    has_infirmary = _any_conf(names_map["infirmary"], lobby_conf)
+    has_rest = _any_conf(names_map["rest"], lobby_conf)
+    has_rest_summer = _any_conf(names_map["rest_summer"], lobby_conf)
+    has_recreation = _any_conf(names_map["recreation"], lobby_conf)
+
+    button_white_present = _any_conf(names_map["button_white"], lobby_conf)
+    button_green_present = _any_conf(names_map["button_green"], lobby_conf)
+    has_button_pink = _any_conf(names_map["button_pink"], lobby_conf)
+    has_pal = _any_conf(names_map["pal"], lobby_conf)
+
+    has_button_white = button_white_present
+    has_button_green = button_green_present
+
+    race_day_primary_conf = Settings.UNITY_CUP_RACE_DAY_CONF or race_conf
+    race_day_relaxed_conf = Settings.UNITY_CUP_RACE_DAY_RELAXED_CONF
+    golden_primary_conf = Settings.UNITY_CUP_GOLDEN_CONF or race_conf
+    golden_relaxed_conf = Settings.UNITY_CUP_GOLDEN_RELAXED_CONF
+
+    race_day_primary_conf = race_day_primary_conf or race_conf
+    golden_primary_conf = golden_primary_conf or race_conf
+
+    def _apply_relaxed(
+        detections: List[DetectionDict],
+        primary: float,
+        relaxed: float,
+        *,
+        require_support: bool,
+    ) -> bool:
+        if not detections:
+            return False
+        if any(float(d.get("conf", 0.0)) >= primary for d in detections):
+            return True
+        use_relaxed = relaxed and relaxed < primary
+        if not use_relaxed:
+            return False
+        relaxed_hits = [d for d in detections if float(d.get("conf", 0.0)) >= relaxed]
+        if not relaxed_hits:
+            return False
+        return not require_support or (button_white_present or button_green_present)
+
+    race_day_candidates = _collect(names_map["race_day"])
+    has_race_day = _apply_relaxed(
+        race_day_candidates,
+        race_day_primary_conf,
+        race_day_relaxed_conf,
+        require_support=True,
     )
-    has_infirmary = any(
-        d["name"] == names_map["infirmary"] and d["conf"] >= lobby_conf for d in dets
+
+    golden_candidates = _collect(names_map["event_golden"])
+    has_golden = _apply_relaxed(
+        golden_candidates,
+        golden_primary_conf,
+        golden_relaxed_conf,
+        require_support=False,
     )
-    has_rest = any(
-        d["name"] == names_map["rest"] and d["conf"] >= lobby_conf for d in dets
-    )
-    has_rest_summer = any(
-        d["name"] == names_map["rest_summer"] and d["conf"] >= lobby_conf for d in dets
-    )
-    has_recreation = any(
-        d["name"] == names_map["recreation"] and d["conf"] >= lobby_conf for d in dets
-    )
-    has_race_day = any(
-        d["name"] == names_map["race_day"] and d["conf"] >= race_conf for d in dets
-    )
-    has_golden = any(
-        d["name"] == names_map["event_golden"] and d["conf"] >= race_conf
-        for d in dets
-    )
-    has_lobby_skills = any(
-        d["name"] == names_map["lobby_skills"] and d["conf"] >= lobby_conf for d in dets
-    )
-    race_after_next = any(
-        d["name"] == names_map["race_after_next"] and d["conf"] >= 0.5 for d in dets
-    )
-    has_button_claw_action = any(
-        d["name"] == names_map["button_claw_action"] and d["conf"] >= lobby_conf
-        for d in dets
-    )
-    has_claw = any(
-        d["name"] == names_map["claw"] and d["conf"] >= lobby_conf for d in dets
-    )
-    has_button_white = any(
-        d["name"] == names_map["button_white"] and d["conf"] >= lobby_conf for d in dets
-    )
-    has_button_green = any(
-        d["name"] == names_map["button_green"] and d["conf"] >= lobby_conf for d in dets
-    )
-    has_button_pink = any(
-        d["name"] == names_map["button_pink"] and d["conf"] >= lobby_conf for d in dets
-    )
-    has_pal = any(
-        d["name"] == names_map["pal"] and d["conf"] >= lobby_conf for d in dets
-    )
+
+    has_lobby_skills = _any_conf(names_map["lobby_skills"], lobby_conf)
+    race_after_next = _any_conf(names_map["race_after_next"], 0.5)
+    has_button_claw_action = _any_conf(names_map["button_claw_action"], lobby_conf)
+    has_claw = _any_conf(names_map["claw"], lobby_conf)
     
     
     # 1) Event

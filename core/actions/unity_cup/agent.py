@@ -5,6 +5,7 @@ from time import sleep
 from typing import Any, Dict, List
 
 from core.actions.training_policy import check_training
+from core.actions.unity_cup import fallback_utils
 from core.controllers.base import IController
 from core.perception.analyzers.screen import classify_screen_unity_cup
 from core.perception.extractors.state import (
@@ -30,7 +31,7 @@ from core.perception.is_button_active import ActiveButtonClassifier
 from core.utils.race_index import unity_cup_preseason_index
 import time
 import random
-from core.types import TrainAction
+from core.types import DetectionDict, TrainAction
 
 class AgentUnityCup(AgentScenario):
     def __init__(
@@ -148,6 +149,15 @@ class AgentUnityCup(AgentScenario):
             if unknown_screen:
                 # Reset event stale counters when on unknown screen
                 self._single_event_option_counter = 0
+
+                if self.patience >= fallback_utils.FALLBACK_PATIENCE_STAGE_1:
+                    if fallback_utils.handle_unknown_low_conf_targets(self, dets):
+                        logger_uma.info(
+                            "[UnityCup] Unknown screen resolved via low-confidence fallback (patience=%d)",
+                            self.patience,
+                        )
+                        continue
+
                 threshold = 0.65
                 if self.patience > 20:
                     # try to auto recover
@@ -284,9 +294,9 @@ class AgentUnityCup(AgentScenario):
             if screen == "Inspiration":
                 self.patience = 0
                 self.claw_turn = 0
+                if fallback_utils.maybe_click_golden(self, dets, reason="inspiration"):
+                    continue
                 button_golden = find_best(dets, "button_golden", conf_min=0.4)
-                
-                
                 if button_golden:
                     self.ctrl.click_xyxy_center(button_golden["xyxy"], clicks=1)
                 continue
@@ -294,11 +304,13 @@ class AgentUnityCup(AgentScenario):
             if screen == "KashimotoTeam":
                 self.patience = 0
                 self.claw_turn = 0
-                button_golden = find_best(dets, "button_golden", conf_min=0.4)
-                
-                
-                if button_golden:
-                    self.ctrl.click_xyxy_center(button_golden["xyxy"], clicks=1)
+                clicked = fallback_utils.maybe_click_golden(self, dets, reason="kashimoto")
+                if not clicked:
+                    button_golden = find_best(dets, "button_golden", conf_min=0.4)
+                    if button_golden:
+                        self.ctrl.click_xyxy_center(button_golden["xyxy"], clicks=1)
+                        clicked = True
+                if clicked:
                     sleep(1.5)
                     self.begin_showdown(img, dets)
                 continue
@@ -410,12 +422,23 @@ class AgentUnityCup(AgentScenario):
             
             if screen == "UnityCupRaceday":
                 # Click Race button
-                if self.waiter.click_when(
+                clicked = self.waiter.click_when(
                     classes=("race_race_day",),
                     texts=("Unity", "Cup"),
                     allow_greedy_click=True,
                     tag="unity_cup_race_day_button",
-                ):
+                )
+
+                if not clicked and self.patience >= fallback_utils.FALLBACK_PATIENCE_STAGE_1:
+                    clicked = fallback_utils.maybe_handle_race_card(
+                        self,
+                        dets,
+                        reason="unity_raceday",
+                        allow_waiter_probe=True,
+                        force_relaxed=True,
+                    )
+
+                if clicked:
                     sleep(2)
                     t0 = time.time()
                     banners_seen = False
@@ -887,6 +910,7 @@ class AgentUnityCup(AgentScenario):
                         logger_uma.debug("[unity_cup] race_after_next inactive")
                     
                     if is_active:
+                        sleep(1)
                         self.ctrl.click_xyxy_center(race_after_next_det["xyxy"], clicks=1)
                         logger_uma.debug("[unity_cup] Clicked race after next first")
                         sleep(3)

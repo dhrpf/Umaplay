@@ -8,6 +8,8 @@ This organizes the mixed notes into a clear, actionable backlog. Items are group
 
 ### 0.4.1
 
+github issues
+
 Dummiez
 opened 4 days ago
 I can't seem to get the adb mode to identify the devices (using LDPlayer), I've also tried Bluestacks which appears on the adb list as well with the same issue. The adb device naming is also a bit confusing to me, does it want the network port or the device name like emulator-5555? (as it appears when using adb devices)
