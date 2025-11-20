@@ -912,12 +912,10 @@ class RaceFlow:
             )
 
             self.waiter.click_when(
-                classes=("button_green",),
+                classes=("race_after_next",),
                 texts=("NEXT",),
-                forbid_texts=("TRY AGAIN",),
-                prefer_bottom=False,
-                allow_greedy_click=False,
-                timeout_s=8.0,
+                prefer_bottom=True,
+                timeout_s=6.0,
                 clicks=random.randint(2, 4),
                 tag="race_after",
             )
