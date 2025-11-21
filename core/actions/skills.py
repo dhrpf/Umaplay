@@ -52,7 +52,7 @@ class SkillsBuyResult:
 
     @property
     def exited_cleanly(self) -> bool:
-        return self.exit_recovered and self.status is not SkillsBuyStatus.EXIT_FAILED
+        return self.exit_recovered
 
 
 class SkillsFlow:
