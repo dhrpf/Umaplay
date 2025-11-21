@@ -180,6 +180,15 @@ Okay, new suggestion: If the run is at the URA Finale, it should not rest at lea
 
 Open Command Prompt and navigate to the Umaplay folder -> installation not clear enough
 
+
+Yolo URA model:
+is confusing the camera button with the skip button, add to training data
+
+
+Discord:
+put icons in discord server... gifs and more
+
+
 ### 0.4.2
 
 Events:
@@ -270,11 +279,16 @@ It uses the clock then stop
 I think it mistake the "try again" button for the "next" button
 Is there a fix for it ?
 
-
+wit training of 3+ white spirit is better than other possible good options
 
 ## 0.5
 
 ### 0.5.0
+
+Speed up processing:
+on android it is very slow
+
+
 
 Add R cards
 
