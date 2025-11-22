@@ -96,8 +96,8 @@ class ScrcpyController(IController):
             if w:
                 logger.debug(f"[Scrcpy] Found by find_window('scrcpy'): title={getattr(w, 'title', None)} class={getattr(w, 'wm_class', None)}")
                 return w
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[Scrcpy] find_window('scrcpy') failed: {e}")
         # 3) NEW: Use robust process-based detection
         try:
             w = find_window_by_process_name("scrcpy")
@@ -130,6 +130,7 @@ class ScrcpyController(IController):
                         w.restore()
                         time.sleep(0.15)
                     except Exception:
+                        # Ignore errors when restoring the window; not all platforms or window types support this operation.
                         pass
 
             # Bring to foreground
@@ -172,7 +173,6 @@ class ScrcpyController(IController):
             except Exception:
                 return None
 
-        if HAS_WIN32:
             try:
                 left_top = win32gui.ClientToScreen(hwnd, (0, 0))
                 right_bottom = win32gui.ClientToScreen(

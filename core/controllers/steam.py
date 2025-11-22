@@ -2,11 +2,10 @@
 import time
 from typing import Any, Optional, Tuple, Union
 
-from core.controllers.base import pyautogui, HAS_PYAUTOGUI
+from core.controllers.base import pyautogui
 from core.controllers.window_utils import (
     get_all_windows,
     get_windows_with_title,
-    find_window,
     find_window_by_process_name
 )
 
@@ -50,8 +49,8 @@ class SteamController(IController):
                 if exact:
                     return exact[0]
                 return win_list[0]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[Steam] Title-based window search failed: {e}")
         
         # Fallback: enumerate all windows
         wins = get_all_windows()
@@ -96,6 +95,7 @@ class SteamController(IController):
                         w.restore()
                         time.sleep(0.15)
                     except Exception:
+                        # Ignore errors if restore fails; fallback restore is best-effort only.
                         pass
 
             # Bring to foreground
