@@ -21,6 +21,21 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 
+try:
+    import pygetwindow as gw  # type: ignore
+    HAS_PYGETWINDOW = True
+except Exception:
+    HAS_PYGETWINDOW = False
+
+# Optional: pywinctl for process-based window discovery (works on many Linux desktops)
+try:
+    import pywinctl as pwc  # type: ignore
+    HAS_PYWINTCL = True
+except Exception:
+    pwc = None  # type: ignore
+    HAS_PYWINTCL = False
+
+
 class WindowDummy:
     def __init__(self, winid: int, title: str, left: int, top: int, width: int, height: int, pid: Optional[int] = None):
         self._hWnd = int(winid)
@@ -202,10 +217,10 @@ def _get_linux_windows(visible_only: bool = True) -> List[WindowDummy]:
         logger.debug("python-xlib not available or enumeration failed")
 
     # Last resort: use pywinctl which wraps OS-specific APIs to enumerate windows and link to processes
-    if HAS_PYWINTCL:
+    if HAS_PYWINTCL and pwc is not None:
         try:
             logger.debug("Trying pywinctl fallback for window enumeration")
-            for val in pwc.getAllWindows():
+            for val in pwc.getAllWindows():  # type: ignore[union-attr]
                 try:
                     # try to get handle or id
                     nid = None
@@ -247,29 +262,15 @@ def _get_linux_windows(visible_only: bool = True) -> List[WindowDummy]:
                 except Exception:
                     wc = None
                 if wc:
-                    w.wm_class = (wc or '').strip()
-                w.pid = pid
+                    w.wm_class = str(wc or '').strip()
+                if pid is not None:
+                    w.pid = int(pid)
                 wins.append(w)
             if wins:
                 return wins
         except Exception:
             logger.debug("pywinctl enumeration failed")
     return []
-
-
-try:
-    import pygetwindow as gw  # type: ignore
-    HAS_PYGETWINDOW = True
-except Exception:
-    HAS_PYGETWINDOW = False
-
-# Optional: pywinctl for process-based window discovery (works on many Linux desktops)
-try:
-    import pywinctl as pwc  # type: ignore
-    HAS_PYWINTCL = True
-except Exception:
-    pwc = None  # type: ignore
-    HAS_PYWINTCL = False
 
 
 def get_all_windows(visible_only: bool = True):
@@ -287,7 +288,7 @@ def get_all_windows(visible_only: bool = True):
         return _get_linux_windows(visible_only=visible_only)
 
 
-def get_windows_with_title(title: str, visible_only: bool = True) -> List[object]:
+def get_windows_with_title(title: str, visible_only: bool = True):
     """Return windows that match the given title exactly (or substring when exact not found).
     The return objects are compatible windows (either pygetwindow or WindowDummy).
     """
@@ -345,7 +346,7 @@ def _get_windows_by_process_name(proc_name: str) -> List[WindowDummy]:
                 continue
         return out
     out = []
-    for val in pwc.getAllWindows():
+    for val in pwc.getAllWindows():  # type: ignore[union-attr]
         try:
             get_pid = getattr(val, 'getPid', None) or getattr(val, 'getPID', None) or getattr(val, 'pid', None)
             pid = get_pid() if callable(get_pid) else get_pid
@@ -377,7 +378,8 @@ def _get_windows_by_process_name(proc_name: str) -> List[WindowDummy]:
                 else:
                     left = top = width = height = 0
                 w = WindowDummy(nid or 0, title or '', int(left or 0), int(top or 0), int(width or 0), int(height or 0))
-                w.pid = pid
+                if pid is not None:
+                    w.pid = int(pid)
                 out.append(w)
             except Exception:
                 continue
@@ -414,7 +416,7 @@ def find_window_by_process_name(process_name: str):
     # Now find windows associated with those PIDs
     if HAS_PYWINTCL:
         # Use pywinctl for robust cross-platform window enumeration
-        for val in pwc.getAllWindows():
+        for val in pwc.getAllWindows():  # type: ignore[union-attr]
             try:
                 get_pid = getattr(val, 'getPID', None) or getattr(val, 'getPid', None)
                 if callable(get_pid):
@@ -438,12 +440,17 @@ def find_window_by_process_name(process_name: str):
                             else:
                                 left = top = width = height = 0
                             w = WindowDummy(nid or 0, title or '', int(left or 0), int(top or 0), int(width or 0), int(height or 0))
-                            w.pid = win_pid
+                            try:
+                                w.pid = int(win_pid)
+                            except Exception:
+                                pass
                             # Try to get WM_CLASS
                             try:
                                 get_cls = getattr(val, 'getWmClass', None) or getattr(val, 'getProcessName', None)
                                 if callable(get_cls):
-                                    w.wm_class = (get_cls() or '').strip()
+                                    cls_val = get_cls()
+                                    if cls_val:
+                                        w.wm_class = str(cls_val).strip()
                             except Exception:
                                 pass
                             logger.debug(f"[find_window_by_process_name] Found window via pywinctl: title={w.title!r} class={w.wm_class!r} pid={win_pid}")
