@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 import threading
-from typing import Callable, Dict, Set, Optional
+from typing import Set, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -117,13 +117,13 @@ class KeyboardHandler:
         if HAS_KEYBOARD:
             try:
                 kb.unhook_all_hotkeys()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[KeyboardHandler] kb.unhook_all_hotkeys error: {e}")
         elif HAS_PYNPUT and self._listener:
             try:
                 self._listener.stop()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"[KeyboardHandler] Error stopping listener: {e}")
         with self._lock:
             self._pressed_keys.clear()
 
