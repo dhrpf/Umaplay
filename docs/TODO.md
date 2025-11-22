@@ -9,14 +9,11 @@ This organizes the mixed notes into a clear, actionable backlog. Items are group
 ### 0.4.1
 
 Bug:
-- Weird error check thread, air grove, and infirmary, Rocostre thread
+- Weird error check thread, air grove, and infirmary, Rocostre thread: https://discord.com/channels/1100600632659943487/1438783548390641789
 - @Rosetta:After the bot checks for skills after a hint, it doesn't seem to be able to detect any info on the screen and will always rest regardless of energy value
 - On new races, is confusing the camera button with the skip button. include the new images at datasets\uma_unity_cup\raw\set_2025-11-19 already labeled, to the ura model (normal no unity) with the inspiration class. Retrained
 - @Rosetta: it is confusing hanshin juvenively for Asahi hai, if asahi hai is first. Japanese oaks and yushun... Maybe do a full read and go back
 - it is not respecting the blue explosions restrictions.?
-
-Skill buying:
-- @Only: I do get a lot of [skills] skipping 'Medium Straightaways ◎' grade='◎' (already purchased) when it is still ○ [1/2] 
 
 Bot strategy (Unity cup):
 - Deactivate guts on unity cup training blue by default
@@ -132,10 +129,6 @@ But I added that to the skill override json
 
 FreedomArk — 11:00
 this is a minor gripe suggestion but is it possible to have a switch where it just stops upon detecting its the crane game? sometimes i leave it in the background on another screen while watching shows and can at least manual the crane game in the off chance it pops up.
-
-
-
-important bug thread link: https://discord.com/channels/1100600632659943487/1438783548390641789
 
 override junior only show great and good, doesn't make sense to show the others
 
@@ -437,6 +430,13 @@ General Bugfixes:
 - Bot was 'trying again' even if option was disabled: now properly ignores "Try again". Thanks for reporting: https://github.com/Magody/Umaplay/issues/75 @DominicS48
 - Unity Cup bug, was not recognizing gold buttons / race day buttons: Added "Pixel 2 XL" Unity Cup images to YOLO model training dataset: https://github.com/Magody/Umaplay/issues/76 @Boshido (@Dorasu?)
 - If was didn't buy a skill, it was not returning to the train screen: Added better control for this https://github.com/Magody/Umaplay/issues/77 @lfmnovaes (Luisao)
+
+- try again keeps failing (when enabled and when disabled)
+
+Skill buying:
+- @Only: I do get a lot of [skills] skipping 'Medium Straightaways ◎' grade='◎' (already purchased) when it is still ○ [1/2] . Now properly handle in memory if we buy twice, once per grade. OCR still can't detect the symbol so relying in memory
+- @Rosetta/@Unknown: increased confidence from 0.75 to 0.85, and added positive/negative tokens for more skills like 'ABC corners/straightaway'  'frenzied ABC', 'Subdued ...', 'Flustered ...' 'Hesitant ...' etc
+
 
 Events:
 - Added card 30063-ikuno-dictus
