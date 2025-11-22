@@ -60,11 +60,11 @@ class KeyboardHandler:
             name = key.name
             # Map pynput names to keyboard library format
             if name.startswith('f') and name[1:].isdigit():
-                return name.upper()  # f9 -> F9
-            return name
+                return name.lower()  # f9 -> f9
+            return name.lower()
         elif HAS_PYNPUT and hasattr(key, 'char'):
             # Regular character key
-            return str(key.char) if key.char else ''
+            return str(key.char).lower() if key.char else ''
         else:
             # keyboard library or string
             return str(key).lower()
@@ -75,7 +75,7 @@ class KeyboardHandler:
             normalized = self._normalize_key(key)
             if normalized:
                 with self._lock:
-                    self._pressed_keys.add(normalized.lower())
+                    self._pressed_keys.add(normalized)
         except Exception as e:
             logger.debug(f"[KeyboardHandler] Error in _on_press_pynput: {e}")
     
@@ -85,7 +85,7 @@ class KeyboardHandler:
             normalized = self._normalize_key(key)
             if normalized:
                 with self._lock:
-                    self._pressed_keys.discard(normalized.lower())
+                    self._pressed_keys.discard(normalized)
         except Exception as e:
             logger.debug(f"[KeyboardHandler] Error in _on_release_pynput: {e}")
     

@@ -12,6 +12,11 @@ from pathlib import Path
 import shutil
 import queue
 
+try:
+    import keyboard as kb  # type: ignore
+except Exception:  # pragma: no cover - optional dependency, handled by keyboard_handler
+    kb = None  # type: ignore
+
 from core.utils import keyboard_handler
 
 from core.actions.ura.agent import AgentURA
@@ -719,12 +724,10 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
 
     # Try to register hooks (only works on Windows with keyboard library)
     # On Linux with pynput, we rely on polling only
-    if keyboard_handler.HAS_KEYBOARD:
+    if keyboard_handler.HAS_KEYBOARD and kb is not None:
         for k in keys_bot:
             try:
                 logger_uma.debug(f"[HOTKEY] Registering hook for {k}…")
-                # Note: keyboard is imported conditionally in keyboard_handler for Windows
-                import keyboard as kb  # type: ignore
                 kb.add_hotkey(
                     k,
                     lambda key=k: event_q.put(("toggle", f"hook:{key}")),
@@ -743,7 +746,6 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
         for k, fn_name in [("F7", "team"), ("F8", "daily"), ("F9", "roulette")]:
             try:
                 logger_uma.debug(f"[HOTKEY] Registering hook for {k}…")
-                import keyboard as kb  # type: ignore
                 kb.add_hotkey(
                     k,
                     lambda key=k, name=fn_name: event_q.put((name, f"hook:{key}")),
