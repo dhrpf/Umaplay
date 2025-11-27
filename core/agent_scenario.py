@@ -9,7 +9,7 @@ from core.actions.claw import ClawGame
 from core.actions.events import EventFlow
 from core.actions.lobby import LobbyFlow
 from core.actions.race import RaceFlow
-from core.actions.skills import SkillsFlow
+from core.actions.skills import SkillsFlow, SkillsBuyResult, SkillsBuyStatus
 
 from core.controllers.base import IController
 from core.perception.ocr.interface import OCRInterface
@@ -386,9 +386,9 @@ class AgentScenario(ABC):
             ", ".join(targets),
         )
 
-        success = False
+        skills_result: SkillsBuyResult | None = None
         try:
-            success = self.skills_flow.buy(targets)
+            skills_result = self.skills_flow.buy(targets)
         except Exception as e:
             logger_uma.error("[post-hint] skills_flow.buy failed: %s", e)
 
@@ -410,7 +410,20 @@ class AgentScenario(ABC):
             # Don't reactivate recheck, to optimize speed
             pass
 
-        return success
+        if skills_result is None:
+            return False
+
+        if skills_result.status is SkillsBuyStatus.SUCCESS:
+            return True
+
+        if not skills_result.exit_recovered:
+            logger_uma.warning(
+                "[post-hint] Skills exit not recovered; will retry later."
+            )
+            return False
+
+        # Exit recovered but no skills bought; treat as neutral result
+        return False
 
     # ------------- Hard-stop helper -------------
     def emergency_stop(self) -> None:

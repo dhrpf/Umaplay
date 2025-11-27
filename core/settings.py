@@ -5,6 +5,8 @@ from pathlib import Path
 import math
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
+from core.utils.logger import logger_uma
+
 
 def _env(name: str, default: Optional[str] = None) -> Optional[str]:
     """Return environment variable (Umaplay_* has priority), else default."""
@@ -108,7 +110,7 @@ class Settings:
     )
 
     UNITY_CUP_ADVANCED_DEFAULT: Dict[str, Any] = {
-        "burst_allowed_stats": ["SPD", "STA", "PWR", "GUTS", "WIT"],
+        "burst_allowed_stats": ["SPD", "STA", "PWR", "WIT"],
         "scores": {
             "rainbowCombo": 0.5,
             "whiteSpiritFill": 0.4,
@@ -144,6 +146,17 @@ class Settings:
     YOLO_IMGSZ: int = _env_int("YOLO_IMGSZ", default=832)
     YOLO_CONF: float = _env_float("YOLO_CONF", default=0.60)  # should be 0.7 in general, but we are a little conservative here...
     YOLO_IOU: float = _env_float("YOLO_IOU", default=0.45)
+    UNITY_CUP_GOLDEN_CONF: float = _env_float("UNITY_CUP_GOLDEN_CONF", default=0.61)
+    UNITY_CUP_GOLDEN_RELAXED_CONF: float = _env_float(
+        "UNITY_CUP_GOLDEN_RELAXED_CONF", default=0.35
+    )
+    UNITY_CUP_RACE_DAY_CONF: float = _env_float("UNITY_CUP_RACE_DAY_CONF", default=0.61)
+    UNITY_CUP_RACE_DAY_RELAXED_CONF: float = _env_float(
+        "UNITY_CUP_RACE_DAY_RELAXED_CONF", default=0.35
+    )
+    UNITY_CUP_FALLBACK_CAPTURE_DEBUG: bool = _env_bool(
+        "UNITY_CUP_FALLBACK_CAPTURE_DEBUG", default=False
+    )
 
     # --------- Logging ---------
     LOG_LEVEL: str = _env("LOG_LEVEL", "DEBUG" if DEBUG else "INFO") or (
@@ -287,6 +300,11 @@ class Settings:
         cls.TRY_AGAIN_ON_FAILED_GOAL = bool(
             g.get("tryAgainOnFailedGoal", cls.TRY_AGAIN_ON_FAILED_GOAL)
         )
+        if cls.DEBUG:
+            logger_uma.info(
+                "[settings] TRY_AGAIN_ON_FAILED_GOAL=%s",
+                cls.TRY_AGAIN_ON_FAILED_GOAL,
+            )
         cls.HINT_IS_IMPORTANT = bool(g.get("prioritizeHint", cls.HINT_IS_IMPORTANT))
         cls.MAX_FAILURE = int(g.get("maxFailure", cls.MAX_FAILURE))
         cls.ACCEPT_CONSECUTIVE_RACE = bool(
@@ -315,9 +333,15 @@ class Settings:
             if not isinstance(raw_adv, dict):
                 raw_adv = {}
 
+            allowed_stats = {"SPD", "STA", "PWR", "GUTS", "WIT"}
+
             burst_stats = raw_adv.get("burstAllowedStats") or adv_defaults["burst_allowed_stats"]
             if isinstance(burst_stats, list):
-                burst_stats = [str(s).upper() for s in burst_stats if str(s).upper() in adv_defaults["burst_allowed_stats"]]
+                burst_stats = [
+                    str(s).upper()
+                    for s in burst_stats
+                    if str(s).upper() in allowed_stats
+                ]
             else:
                 burst_stats = list(adv_defaults["burst_allowed_stats"])
 
