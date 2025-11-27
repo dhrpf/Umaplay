@@ -170,18 +170,18 @@ class DailyRaceFlow:
             self.waiter.click_when(
                 classes=("button_white",),
                 prefer_bottom=False,
-                timeout_s=2.3,
+                timeout_s=7.3,
                 texts=("VIEW RESULTS", "CLOSE"),
                 forbid_texts=("BACK",),
                 allow_greedy_click=False,
-                clicks=random.randint(3, 4),
+                clicks=1,
                 tag="daily_race_view_results_white",
             )
             sleep(2.0)
-            nav.random_center_tap(
-                self.ctrl, img, clicks=random.randint(3, 4), dev_frac=0.20
-            )
-            sleep(2.0)
+            # nav.random_center_tap(
+            #     self.ctrl, img, clicks=random.randint(3, 4), dev_frac=0.20
+            # )
+            # sleep(2.0)
 
             # Then green to continue
             if self.waiter.click_when(

@@ -5,9 +5,13 @@ import random
 import time
 from typing import List, Optional, Sequence, Tuple, Dict
 from collections import Counter
+from dataclasses import dataclass
+from enum import Enum
 from PIL import Image
 
 from core.controllers.android import ScrcpyController
+from core.controllers.adb import ADBController
+from core.controllers.bluestacks import BlueStacksController
 from core.controllers.base import IController
 from core.perception.ocr.interface import OCRInterface
 from core.perception.yolo.interface import IDetector
@@ -25,6 +29,30 @@ from core.perception.is_button_active import ActiveButtonClassifier
 from core.types import DetectionDict
 from core.utils.yolo_objects import inside, yolo_signature
 from core.utils.waiter import Waiter
+from core.utils.pointer import smart_scroll_small
+
+
+class SkillsBuyStatus(Enum):
+    SUCCESS = "success"
+    NO_BUY = "no_buy"
+    EXIT_FAILED = "exit_failed"
+
+
+@dataclass(frozen=True)
+class SkillsBuyResult:
+    status: SkillsBuyStatus
+    clicked_any: bool
+    exit_recovered: bool
+
+    def __bool__(self) -> bool:  # pragma: no cover - convenience helper
+        return self.status is SkillsBuyStatus.SUCCESS
+
+    def __str__(self) -> str:  # pragma: no cover - logging helper
+        return self.status.value
+
+    @property
+    def exited_cleanly(self) -> bool:
+        return self.exit_recovered
 
 
 class SkillsFlow:
@@ -65,18 +93,18 @@ class SkillsFlow:
         skill_list: Sequence[str],
         *,
         max_scrolls: int = 15,
-        ocr_threshold: float = 0.75,  # experimental
+        ocr_threshold: float = 0.85,  # experimental, upgraded to 0.82 for the sake of avoiding false positives
         scroll_time_range: Tuple[int, int] = (6, 7),
         early_stop: bool = True,
         date_key: Optional[str] = None,
-    ) -> bool:
+    ) -> SkillsBuyResult:
         """
         End-to-end skill buying.
-        Returns True if at least one skill was purchased (Confirm → Learn → Close → Back).
+        Returns a SkillsBuyResult representing success, a clean no-buy exit, or an exit failure.
         """
         if not skill_list:
             logger_uma.info("[skills] No targets configured.")
-            return False
+            return SkillsBuyResult(SkillsBuyStatus.NO_BUY, clicked_any=False, exit_recovered=True)
 
         logger_uma.info("[skills] Buying targets: %s", ", ".join(skill_list))
 
@@ -86,12 +114,21 @@ class SkillsFlow:
 
         # Desired counts per target: "◎" requires at least 2 buys, otherwise 1.
         desired_counts: Dict[str, int] = {}
+        purchases_made: Dict[str, int] = {}
         for t in skill_list:
-            if "◎" in t:
-                desired_counts[t] = 2
-            else:
-                desired_counts[t] = 1
-        purchases_made: Dict[str, int] = {t: 0 for t in skill_list}
+            desired_counts[t] = 2 if "◎" in t else 1
+            # Seed current-session counts from persisted memory so we don't rebuy when
+            # reopening the skills screen mid-run (e.g., double-circle skills).
+            if self._skill_memory:
+                canonical = self._canonical_skill_name(t)
+                grade_symbol = self._grade_from_name(t)
+                if canonical:
+                    bought = self._skill_memory.get_bought_count(
+                        canonical, grade=grade_symbol
+                    )
+                    purchases_made[t] = min(bought, desired_counts[t])
+                    continue
+            purchases_made[t] = 0
 
         patience = 3
         for i in range(max_scrolls):
@@ -135,20 +172,32 @@ class SkillsFlow:
 
         if any_clicked:
             logger_uma.info("[skills] Confirming purchases...")
-            self._confirm_learn_close_back_flow()
-            return True
+            confirmed = self._confirm_learn_close_back_flow()
+            if confirmed:
+                return SkillsBuyResult(SkillsBuyStatus.SUCCESS, clicked_any=True, exit_recovered=True)
 
-        # If nothing was bought, go BACK cleanly using Waiter (OCR-gated)
-        self.waiter.click_when(
-            classes=("button_white",),
-            texts=("BACK",),
-            prefer_bottom=True,
-            timeout_s=2.5,
-            tag="skills_flow_back_no_buys",
-        )
+            logger_uma.warning(
+                "[skills] Confirmation flow failed; attempting recovery before returning control."
+            )
+            recovered = self._ensure_exit_to_lobby(tag_prefix="skills_flow_exit_recovery")
+            if not recovered:
+                logger_uma.error("[skills] Unable to confirm exit after confirmation failure.")
+            return SkillsBuyResult(
+                SkillsBuyStatus.EXIT_FAILED,
+                clicked_any=True,
+                exit_recovered=recovered,
+            )
+
         logger_uma.info("[skills] No matching skills found to buy.")
         time.sleep(1.2)
-        return False
+        recovered = self._ensure_exit_to_lobby(
+            tag_prefix="skills_flow_back_no_buys",
+            prefer_back_only=True,
+        )
+        if not recovered:
+            logger_uma.warning("[skills] Unable to confirm exit after no-buy flow.")
+        status = SkillsBuyStatus.NO_BUY if recovered else SkillsBuyStatus.EXIT_FAILED
+        return SkillsBuyResult(status, clicked_any=False, exit_recovered=recovered)
 
     # --------------------------
     # Internals
@@ -387,6 +436,8 @@ class SkillsFlow:
                 if ok:
                     matches.append((target, score, reason))
 
+            diagnostics.sort(key=lambda x: x[2], reverse=True)
+
             contains_any = bool(matches)
             # Weighted best match: prioritize certain key terms
             KEY_UPWEIGHT = ("groundwork", "left-handed", "corner connoisseur")
@@ -414,7 +465,7 @@ class SkillsFlow:
                             "score": round(s, 3),
                             "reason": r,
                         }
-                        for t, ok, s, r in diagnostics[:4]
+                        for t, ok, s, r in diagnostics[:3]
                     ],
                 )
 
@@ -432,15 +483,22 @@ class SkillsFlow:
 
             # Respect purchase quotas before clicking
             if best_name is not None and (contains_any or best_score >= ocr_threshold):
-                if purchases_made.get(best_name, 0) >= desired_counts.get(best_name, 1):
+                desired = desired_counts.get(best_name, 1)
+                click_counts = desired
+                if purchases_made.get(best_name, 0) >= desired:
                     continue
-                if canonical_name and self._already_bought(canonical_name, grade_symbol):
-                    logger_uma.info(
-                        "[skills] skipping '%s' grade='%s' (already purchased)",
-                        best_name,
-                        grade_symbol or SkillMemoryManager.ANY_GRADE,
+                if canonical_name and self._skill_memory:
+                    bought_count = self._skill_memory.get_bought_count(
+                        canonical_name, grade=grade_symbol
                     )
-                    continue
+                    click_counts = abs(desired - bought_count)
+                    if bought_count >= desired:
+                        logger_uma.info(
+                            "[skills] skipping '%s' grade='%s' (already purchased)",
+                            best_name,
+                            grade_symbol or SkillMemoryManager.ANY_GRADE,
+                        )
+                        continue
                 # Click: center + slight upward offset to counter inertia
                 bx1, by1, bx2, by2 = buy["xyxy"]
                 bh = max(1, by2 - by1)
@@ -451,7 +509,7 @@ class SkillsFlow:
                     upward_offset = 0.15
                 dy = max(2, int(bh * upward_offset))  # ~X% upward
                 shifted = (bx1, by1 - dy, bx2, by2 - dy)
-                self.ctrl.click_xyxy_center(shifted, clicks=1, jitter=0)
+                self.ctrl.click_xyxy_center(shifted, clicks=click_counts, jitter=0)
                 purchases_made[best_name] = purchases_made.get(best_name, 0) + 1
                 if canonical_name and self._skill_memory:
                     self._skill_memory.record_bought(
@@ -459,6 +517,7 @@ class SkillsFlow:
                         grade=grade_symbol,
                         date_key=date_key,
                         commit=True,
+                        boughts=click_counts
                     )
                 logger_uma.info(
                     "Clicked BUY for '%s' (score=%.2f reason=%s) [%d/%d]",
@@ -554,6 +613,53 @@ class SkillsFlow:
         time.sleep(0.15)
         return True
 
+    def _ensure_exit_to_lobby(
+        self,
+        *,
+        tag_prefix: str,
+        prefer_back_only: bool = False,
+        attempts: int = 3,
+    ) -> bool:
+        """Attempt to leave the Skills screen, optionally allowing CLOSE/OK fallbacks."""
+        exit_targets = [("button_white", ("BACK",))]
+        if not prefer_back_only:
+            exit_targets.extend(
+                [
+                    ("button_white", ("CLOSE",)),
+                    ("button_green", ("OK", "NEXT", "PROCEED")),
+                ]
+            )
+
+        for attempt in range(attempts):
+            for classes, texts in exit_targets:
+                clicked = self.waiter.click_when(
+                    classes=(classes,),
+                    texts=texts,
+                    prefer_bottom=True,
+                    allow_greedy_click=False,
+                    timeout_s=1.5,
+                    tag=f"{tag_prefix}_{texts[0].lower()}_{attempt}",
+                )
+                if clicked:
+                    time.sleep(0.6)
+                    if self._is_lobby_or_raceday_visible():
+                        return True
+
+        return self._is_lobby_or_raceday_visible()
+
+    def _is_lobby_or_raceday_visible(self) -> bool:
+        if self.waiter.seen(
+            classes=("lobby_races", "race_race_day"),
+            tag="skills_exit_seen_lobby",
+        ):
+            return True
+        return self.waiter.seen(
+            classes=("button_green",),
+            texts=("RACE", "NEXT"),
+            tag="skills_exit_seen_green",
+            threshold=0.5,
+        )
+
     def _focus_nudge(self, game_img: Image.Image, dets: List[DetectionDict]) -> None:
         """
         If nothing clicked on first pass, gently move cursor onto the scrollable list to
@@ -583,23 +689,57 @@ class SkillsFlow:
         """
         One scroll step (PC: wheel nudges; Android: drag with end-hold to kill inertia).
         """
-        is_android = isinstance(self.ctrl, ScrcpyController)
-        if is_android:
+        if isinstance(self.ctrl, ScrcpyController):
             xywh = self.ctrl._client_bbox_screen_xywh()
             if xywh is None:
                 return
             x, y, w, h = xywh
-            cx, cy = (x + w // 2), (y + h // 2)
+            cx, cy = (x + w // 2), int(y + h * 0.60)
             self.ctrl.move_to(cx, cy)
-            time.sleep(0.5)
+            time.sleep(0.25)
+            # Larger, slower drag to cover more of the skills list per scroll
             self.ctrl.scroll(
-                -h // 10,
-                steps=4,
-                duration_range=(0.2, 0.4),
-                end_hold_range=(0.15, 0.22),
+                -int(h * 0.25),
+                steps=2,
+                duration_range=(0.22, 0.40),
+                end_hold_range=(0.2, 0.40),
             )
             # Inertia wait
-            time.sleep(0.12)
+            time.sleep(0.15)
+        elif isinstance(self.ctrl, ADBController):
+            # Reuse smart_scroll_small for ADB so we get anchor-aware drags
+            anchor_xy = None
+            xywh = self.ctrl._client_bbox_screen_xywh()
+            if xywh:
+                x, y, w, h = xywh
+                anchor_xy = (x + w // 2, y + h // 2)
+            smart_scroll_small(
+                self.ctrl,
+                steps_android=2,
+                fraction_android=0.18,
+                settle_pre_s=0.02,
+                settle_mid_s=0.05,
+                settle_post_s=0.25,
+                anchor_xy=anchor_xy,
+                end_hold_range_android=(0.40, 0.6),
+            )
+            # Inertia wait
+            time.sleep(0.15)
+        elif isinstance(self.ctrl, BlueStacksController):
+            xywh = self.ctrl._client_bbox_screen_xywh()
+            if not xywh:
+                return
+            x, y, w, h = xywh
+            cx, cy = (x + w // 2), int(y + h * 0.60)
+            self.ctrl.move_to(cx, cy)
+            time.sleep(0.25)
+            self.ctrl.scroll(
+                -int(h * 0.15),
+                steps=2,
+                duration_range=(0.22, 0.40),
+                end_hold_range=(0.15, 0.30),
+            )
+            time.sleep(0.15)
         else:
             n = random.randint(scroll_time_range[0], scroll_time_range[1])
             for _ in range(n):

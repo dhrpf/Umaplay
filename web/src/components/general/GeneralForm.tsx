@@ -299,7 +299,7 @@ export default function GeneralForm() {
               label={g.tryAgainOnFailedGoal ? 'Enabled' : 'Disabled'}
             />
           }
-          info="If the agent fails to read the goal text, reattempt once."
+          info="When enabled, the bot will immediately retry a failed goal race using an alarm clock. Disable to always continue without retrying."
         />
 
         {/* Moved to per-preset Strategy section: prioritizeHint */}

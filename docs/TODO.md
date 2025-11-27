@@ -9,39 +9,45 @@ This organizes the mixed notes into a clear, actionable backlog. Items are group
 ### 0.4.1
 
 
-Weir error check thread, air grove: @
 
-add a togle to 'prefer priority stats if are 0.75 less or equal' disabled by default
+### 0.4.2
+
+
+Bug:
+- @Rosetta: it is confusing hanshin juvenively for Asahi hai, if asahi hai is first. Japanese oaks and yushun... Maybe do a full read and go back
+- it is not respecting the blue explosions restrictions.?
+
+ADB:
+- Bluestack bugfixes and validation @Pure Fox and others
+
+README.md:
+- Updated with instructions for ADB (@Dummiez)
+- suggest just open terminal as admin in the worst case
+- slice the readme to make easier to read
+- Update images
+- MuMuPlayer through the localhost:5557 docs
+- LDPlayer ADB docs
+- INDICATION, DON'T USE POWER SHELL
+- people is forgetting activate conda env
+- Open Command Prompt and navigate to the Umaplay folder -> installation not clear enough. The Change directory
+
+Discord:
+- put icons in discord server... gifs and more
+- give points to Dorasu and antonio and others for activity on discord. Gamification give points to who gave me the discord template for git: "I think you may need template for issue report"
+
+
+
+- On new races, is confusing the camera button with the skip button. include the new images at datasets\uma_unity_cup\raw\set_2025-11-19 already labeled, to the ura model (normal no unity) with the inspiration class. Retrained
+
+Events:
+- adding a new uma trainee, doesn't require only scraping data, we may need to look into internal umamusume assets for the classifier algorithm... document this kind of processes and make the auto validator algorithms. And add the new icons
+
+
+Bot Strategy (General):
+- @Unknown: Okay, new suggestion: If the run is at the URA Finale, it should not rest at least at the final turn before the finals
+
 
 also look for 'alone' hints / spirits, we may have a support card below. If not recognized a support_card
-
-
-@Rosetta:Final tip, only do optional races if:
-Never do optional races just because it doesn't look like there's anything else good. Discourage this option in Unity cup web ui
-
-
-+1 for wit (we want to avoid resting as much as possible), but don't explode blue here
-
-General:
-- Create discord roles
-
-BUG:
-Rosetta — 8:40
-
-After the bot checks for skills after a hint, it doesn't seem to be able to detect any info on the screen and will always rest regardless of energy value
-
-Claw Machine:
-- @Rosetta: Re-check of the logic so it always Win. If first detected plushie is good enough and it is not at the border take it, if not do a full scan. Check the zips on discord.
-
-we have 'silent' yolo detection errors. for example with support_bar, it has 0.31 so it was filtered out before our debug saver
-add a check like 'if support type, then you must have support bar, otherwise try again with less confidence
-
-Fast mode bugs:
-- Solve
-
-reprocess all events data and trainee data
-
-Handle a new screen class 'Race Stale' to detect the 'advance / next' button and press it 
 
 
 - @Rosetta:
@@ -50,12 +56,6 @@ For Tazuna I have stats > hints for energy overcap priority, but it will still r
 Author notes: I think this is a bug. This is a problem that should not be happening this way. So we need to investigate what's going on and what this person is trying to to do. This is regarding the energy cap prevention, well, the overflow of energy prevention that we are rotating the options here. But I think it's also related to not only to PALs, but this is also related to in general, because maybe we have this bug also for other support cards, not only for Tasu Nakashimoto or, well, PAL support. Maybe we have this for other ones.
 """
 
-
-#### README.md:
-- suggest just open terminal as admin in the worst case
-- slice the readme to make easier to read
-- Update images
-### 0.4.2
 
 Events:
 - how should i respond still fails (chain). Check and validate
@@ -75,9 +75,12 @@ and the minimum energy to trigger race, I think right now I check if we have >= 
 Quality Assurance:
 - Color unit testing: detected as yellow the 'green' one "yellow: +0.00"
 
+if ignored hint, don't do deferred check...
 
 
-PhantomDice —> Thanks for supporting project
+
+mumuplayer test
+
 
 
 with f8 also detect the shop
@@ -93,13 +96,172 @@ thread of 'Unknown'
 support_type is confusing pwr and PAL, better use a classiffier or another logic
 
 
+make it clear:
+Thorin
+
+ — 11/11/2025 6:41
+Nevermind, I believe I found the solution (Won't delete so people find the solution when searching Discord)
+
+We have to use a Virtual Machine to be able to use our mouse:
+https://github.com/Magody/Umaplay/blob/main/docs/README.virtual_machine.md
+
+
+antonioxxx2
+
+ — 11/11/2025 17:11
+estoy viendo que en algunas carreras el mouse queda entremedio de concierto y next
+
+Rosetta — 13/11/2025 13:14
+I don't have a log but sometimes when I schedule the Japanese Derby and the recommended race is a random OP one, it'll go for the Japanese Oaks instead - maybe because it's on the first screen and the Derby isn't, but the Satsuki Sho doesn't have this problem
+
+
+Unknown
+
+ — 15/11/2025 10:14
+Weird bug, but the bot buys late surger straightaways when I put pace chaser and pace chaser straightaways on late surger runs
+put positive / negative tokens
+
+Rosetta — 15/11/2025 10:16
+To fix that go to core\actions\skills.py, edit it in notepad and find the confidence that says 0.75 # experimental and change the 0.75 to 0.9
+The only issue I've had since then is firm/wet conditions
+But I added that to the skill override json
+
+FreedomArk — 11:00
+this is a minor gripe suggestion but is it possible to have a switch where it just stops upon detecting its the crane game? sometimes i leave it in the background on another screen while watching shows and can at least manual the crane game in the off chance it pops up.
+
+override junior only show great and good, doesn't make sense to show the others
+
+daily race kind of fail when shopping
+
+Unity cup:
+Put fallback in medium option as default
+Buff to single supports friend training -> 1 to 1.1 and make it configurable
+
+
+cover new events
+kashimoto loop when energy overflow, bug
+
+
+
+
+
+R…
+
+ — Yesterday at 22:34
+Name                    CurrentHorizontalResolution CurrentVerticalResolution CurrentRefreshRate
+----                    --------------------------- ------------------------- ------------------
+Meta Virtual Monitor
+NVIDIA GeForce RTX 4070 5120                        1440                      239
+its a Samsung Odessey Monitor
+Image
+Ultra Wide
+and for some reason the script forces to work with Procesor chip instead of graphics card can we add an option to launch it with graphics card like nvidia to use CUda properly and the other to use just procesor like intel chip or amd
+i changed the script a bit for me to use with my nvidia card and it works way faster 
+
+R…
+
+ — 14/11/2025 19:42
+so i just found the two main issues, for some reason i was having conflicts with my CUDA version and it was not detecting it right and second i had HDR enabled in my pc... i just changed the CUDA version to one compativle from Pytorch and disabled HDR.
+
+
+Claw Machine:
+- @Rosetta: Re-check of the logic so it always Win. If first detected plushie is good enough and it is not at the border take it, if not do a full scan. Check the zips on discord.
+
+we have 'silent' yolo detection errors. for example with support_bar, it has 0.31 so it was filtered out before our debug saver
+add a check like 'if support type, then you must have support bar, otherwise try again with less confidence
+
+
+- Weird error check thread, air grove, and infirmary, Rocostre thread: https://discord.com/channels/1100600632659943487/1438783548390641789
 ### 0.4.3
 optimize CNN predicts with ONNX runtime for CPU automatically
+
+Fat Raccoon
+
+ — 14/11/2025 0:30
+Is there any way to increase the speed of the bot or is it meant to stay at that speed to prevent issues?
+
+.315 — 14/11/2025 0:09
+The bot always use a clock when failing a race even when i set it to stop on failed race
+It uses the clock then stop
+I think it mistake the "try again" button for the "next" button
+Is there a fix for it ?
+
+wit training of 3+ white spirit is better than other possible good options
+improve the seasonal multipliers log
+
+it did rest before the january senior event... even though we will have upgrade in energy and mood
+group presets, if one is already active, can't not right click another tab
+improve info text in bot strategy policy
+if try to change the group a particular item, it is changing the full group
+
+Phalkun
+
+ — 7:07
+Idk but most of the time I press F2 again and it didn't stop
+So I wonder if pause will be an actual function that show a pop up on the screen like when you press f2 to activate the auto
+
+
+
+Phalkun
+
+ — 8:29
+just wonder can you add pause (press f2 again or f3 or sth)?
+Rosetta — 10:43
+Technically you can press F2 again and it will stop
+But it then forgets which skills you bought which can sometimes suck (especially if it hangs during a race you don't have a trophy for)
+
+
+skill positive / negative tokens for pace chacer corners / straightaway and more, like Rosetta
+
+
+
+Pure Fox
+
+ — 14:12
+it seems like the debut style option is ignored, there is also no option to choose style for later races? so it uses default style for every race afterwards
+Image
+Pure Fox
+ — 14:20
+tho in the log it said something about setting style
+
 
 
 ## 0.5
 
 ### 0.5.0
+if not skill bought, or if multiple 'disabled' plus icons, that may mean, we don't have more skill points so we can early finish the buy sequence
+solve fast mode bugs
+
+Speed up processing:
+on android it is very slow
+speed up the bot
+
+
+antonioxxx2
+
+ — Yesterday at 23:42
+Is there any way to improve the performance of my Umamusume?
+using the bot sometimes, one run = 2hours or 1hour and 30 minutes
+
+
+Pure Fox
+dynamic styling race
+ — 17:05
+tbh all i really need is late on a few specific races (tss etc)
+iris — 17:06
+i think another fork has setting style based on race distance, could be an option?
+
+
+
+Claw Machine:
+ニコラス
+
+ — Yesterday at 22:56
+Quick question, does the bot actually work better in full screen? Whenever I did it with the game in windowed mode so I could look at the terminal process, it performs real badly at the claw machine minigame as it often went too far from the plushies.
+
+
+
+Add R cards
 
 Bat and executable:
 - bat is failing
@@ -185,7 +347,17 @@ im going to try it out with air grove and see what happens
 vestovia — Yesterday at 7:37
 hi! thank you for the umaplay bot, i understand you avoid emulators due to the inherent risk, but just wondering if adb support or support for other emulators is in the plans? im currently using mumuplayer for the 60fps+ as sometimes i play manually and i think it also might allow it to run in the background like uat? though i think i can use rdp for the meantime but it would be nice. thank you again!
 
-0.5.2
+EpharGy — 0:11
+Any thoughts on making presets more modular? or giving the ability to use a full preset or a modular one?
+ie Character, Race Style, Race Length, Other (CM specific or other skills)?
+for example, it's pretty tedious to switch out skills for different Styles and CM's
+
+could then mix and match as needed
+Maybe not even make predefined modules, but just have it so you can load multiple preset files and it will basically join them,  could leave it up to the user on what details they add in what presets. May need to de-duplicate or look for clashes, or maybe just prioritize based on load order?
+
+add a togle to 'prefer priority stats if are 0.75 less or equal' disabled by default
+
+### 0.5.2
 support friend bar when overlapped by support_hint, make sure we don't confuse colors or classification
 new library, try to handle autoinstall
 
@@ -243,184 +415,29 @@ Bot Strategy:
 End2End navigator play:
 - Github Issue
 
-
-
-
+- I can't replicate this "@Rosetta:After the bot checks for skills after a hint, it doesn't seem to be able to detect any info on the screen and will always rest regardless of energy value"
 
 ## To validate
 
-@Chat Ja
-"""
-sorry to dm. my english not good. i found problem on dev branch. could you increase margin top and decrease margin bot ? thank you !
-"""
 
-PhantomDice —> Thanks for supporting project
+ADB:
+- LDPlayer: bugfix, couldn't scroll through races.
+- Adjusted the scroll amount
 
+General Bugfixes:
+- Bot was 'trying again' even if option was disabled: now properly ignores "Try again". Thanks for reporting: https://github.com/Magody/Umaplay/issues/75 @DominicS48
+- Unity Cup bug, was not recognizing gold buttons / race day buttons: Added "Pixel 2 XL" Unity Cup images to YOLO model training dataset: https://github.com/Magody/Umaplay/issues/76 @Boshido (@Dorasu?)
+- If was didn't buy a skill, it was not returning to the train screen: Added better control for this https://github.com/Magody/Umaplay/issues/77 @lfmnovaes (Luisao)
+- try again keeps failing (when enabled and when disabled)
 
-Unity cup:
-- Model trained in heavier YOLO model
-
-ADB support:
-Thanks for Adding ADB support @C
-
-Automatic scrapping for data
-Thanks! @Only
-
-#### General Strategy / Policy:
-- Parameter to define 'weak turn':
-"""
-Author notes: So, when I say weak turns, I mean there are some turns where we usually prefer to skip, and that's why we are using the weak part to skip the turn. And we need to define in the web UI, for both URAfinel and UnityCube, a way to set up which value is considered a weak turn. For example, for UnityCube, it may be by default 1.75, and for URA, it could be 1 in general.
-"""
-- Speaking of minimum mood, if it's great you often see the bot recreate for the first 2 turns, is it possible to perhaps have a different minimum mood option for the junior year or if energy is full and a friendship can be raised do that instead?
-"""
-Author notes: We can have also for both scenarios, for all scenarios, a sharded option for a toggle that when clicked, it will show a different mood option that will be triggered only for junior year. So they can set the minimal mood, but that will be only for junior year.
-"""
-- Lookup toggle: allow skipping **scheduled race** if training has a minimum defined SV like **2.5+ SV if URA or 4 if Unity Cup**. This should be configurable in web ui
-  “Check first” at lobby: pre-turn heuristics before going to infirmaty, rest, etc. Pre lookup
-  "Check first" allowed for races individually set
-"""
-Author notes: We’re making a decision to enter the Training phase. Inside Training, we rely on an additional decision layer — essentially another flowchart — to determine what to do during that specific training turn.
-
-This section explains how, in some cases, we might want to check for higher-priority actions before committing to a greedy choice like Training. For instance, going to the Infirmary might be important but not necessarily urgent.
-
-I’d like to introduce a toggle in the Web UI that applies to all scenarios. When this toggle is enabled in a preset, the bot should evaluate some additional conditions before performing its usual greedy actions in the lobby. Usually, we prefer to define such behaviors within presets, as it allows better configurability.
-
-Let’s go through some examples:
-
-1. Infirmary
-
-If the toggle is enabled, before going to the infirmary, we should first check whether the Training screen contains a high-value opportunity.
-Specifically, if there’s a super high Support Value (SV) — say, ≥ 3.5 in Unity Cup or ≥ 2.5 in URA — then we should skip the infirmary this turn and train instead, planning to visit the infirmary on the next turn. This logic is straightforward.
-
-2. Auto-Rest Minimum
-
-For the auto-rest rule, however, the toggle doesn’t override anything.
-Even if the toggle is active, if the player’s energy is below the auto-rest minimum, the bot should always rest, without any additional checks. This rule must remain absolute.
-
-3. Summer Handling
-
-Similarly, for summer proximity, the existing logic should remain unchanged.
-If summer is two or fewer turns away and energy is low, the bot should focus on recovering energy so that it enters summer in good condition — this must be respected even when the toggle is enabled.
-
-4. Goal Races (Critical Goals)
-
-Things get more complex for races, particularly those related to critical goals.
-If a mandatory goal race (like a G1, Maven, or fan milestone) is approaching, the bot must still respect the rule for maximum waiting turns before racing.
-
-For example, if the maximum allowed wait time before a goal race is 8 turns, and we’re currently at turn 13, we shouldn’t immediately take the race when we first detect it. Instead, we wait until the number of turns remaining equals 8, or possibly –1 if OCR failed and we couldn’t read it correctly.
-
-If the toggle is enabled, we can make this rule slightly more flexible:
-
-Before racing, check whether there’s a very good Training opportunity.
-
-If there is, we can take that training instead of racing immediately.
-
-However, once the turns left reach ≤ 5, we must proceed to the race, regardless of the toggle.
-
-This ensures the toggle won’t cause failed runs by endlessly delaying goal races just because of attractive training options.
-
-5. Optional / Planned Races
-
-For optional races (those not tied to mandatory goals), the logic differs.
-Since these races aren’t required, we should allow users to mark specific planned races as tentative.
-
-At the Web UI level, this would mean adding a per-race toggle in the scheduler.
-If this toggle is on for a given race, the bot should, before racing, scan the training screen for good options:
-
-If a valuable training tile is found, the bot should train instead of racing.
-
-If not, it proceeds with the race as usual.
-
-This gives users fine-grained control:
-
-Races marked with the toggle ON are tentative, meaning “only race if no strong training options exist.”
-
-Races with the toggle OFF are mandatory, meaning the bot must race regardless of available training options.
-
-By combining these controls, we gain better configurability, reduce the number of failed or suboptimal runs, and make the decision-making process much more adaptive to each preset and scenario.
-
-Summary:
-The new toggle provides a “pre-check” layer before greedy decisions like Infirmary, Rest, or Race actions. It allows the system to momentarily consider higher-value training opportunities but still respects critical safeguards (energy minimums, summer proximity, and goal deadlines). The final behavior should balance flexibility with safety, ensuring the bot neither skips essential actions nor wastes high-value turns.
-"""
+Skill buying:
+- @Only: I do get a lot of [skills] skipping 'Medium Straightaways ◎' grade='◎' (already purchased) when it is still ○ [1/2] . Now properly handle in memory if we buy twice, once per grade. OCR still can't detect the symbol so relying in memory
+- @Rosetta/@Unknown: increased confidence from 0.75 to 0.85, and added positive/negative tokens for more skills like 'ABC corners/straightaway'  'frenzied ABC', 'Subdued ...', 'Flustered ...' 'Hesitant ...' etc
 
 
-#### PAL Policy:
-- Capture in lobby stats 'Recreation PAL' for later trainig decisions. YOLO model can detect that
-"""
-Author notes:
-In this model, we are capturing a special class just for this RecreationPawl and it's a pink little icon and we should store that in memories so we can use this in next steps. Even more, every time we have a pawl, we need to know in which chain we have this pawl because if this pawl can have 5 dates, 5 chains, and the first chain for example will regenerate some energy, the second one will generate some energy, there will be some special chain step that will not generate that particular energy and we need to keep that in memory and if we know that there is this RecreationPawl icon, we can press the RecreationPawl icon and a pop-up will be displayed and we can just capture the chain steps there. So we know how many chain steps we have and we can take some decisions for this.
-"""
+Events:
+- Added card 30063-ikuno-dictus
+- Added characters 102801-hishi-akebono, 101901-agnes-digital
 
-
-- Use dating with pal (if it give energy), as replacement of REST and RECREATION
-"""
-Author notes: This is literally something, like, I think it's the same as mentioned before, because we either in summer and summer or normal rune we can just have this facility of going to rest or recreation. In case of summer, those options are merged, so anyway. So I think we need to have this option in the web UI. So by default, no, sorry, we don't need this in web UI because this should be a default behavior. If we need energy and we have some events to be triggered from the PAL, we should go back and just take the recreation with the PAL.
-"""
-
-- @Rosetta: Tazuna blue was worth more, you want to get it to green ASAP to unlock her dates (there's a bonus if you do it in the junior year)
-"""
-Author notes: Regarding this requirement, I think I already worked on it. Probably it's done. But let's check that this is implemented in EURA and UnityCup. Basically, I think if the PAL either TASUNA or Super Kashimoto or a support card that contains inside a support PAL icon, this is not very effective. So maybe we want to use this just as a final fallback. But in general, if we have this TASUNA or Kashimoto, we should give more points to if they have the blue color. And I will say if they have blue color, let's add a score of 1.5. I think I already did that anyway. So we can go to green as fast as possible. Maybe we can do that logic for now and we can improve later.
-"""
-
-- Some options doesn't give energy, but move the event chain, handle that if 'weak turn'. If we don't know in which chain number we are, open the recreation / collect and go back
-"""
-Author notes: So, as you can see in the event catalog, some options for Tasuna or Super Kashimoto will not give us energy, will give us stats, so we need to be very careful if we detect a weak turn, but the event chain, let's say we are using a Pal that in its event, in the next event, let's say we are in the second chain right now, after we can collect that information, so let's say we are in the second chain, that means that the next date we will have with the Pal will be the third chain, but let's say for this particular Pal, they will not give us the energy in the third chain, so we need to be careful here because if we need energy and we decide to go back and go using the rest option from this Pal, we will have problems, definitely we will have some problems there because we will not be generating energy, but if we are going back with the reason of do it to, we need recreation, yeah, it doesn't matter if this next chain, this next event will not give us energy, it doesn't matter because we are going back just for the mood increasing or just for the stats, because this is another one, even if we don't need energy or mood increasing, we may detect a weak turn and we should prioritize going with Riko Kashimoto if we have enough energy available to be recovered, so we can move the event chain because our objective is to finalize the date as fast as possible, but only if we have a weak turn and we have some energy to restore, so only if it's worth to do that. Thank you.
-"""
-
-
-- On Weak turn, if energy is not full and recreation is there with a turn that give us energy, use the pal.
-"""
-Author notes: We are already collecting a weak turn value from YBY, and we should leverage that parameter, or at least make sure we are leveraging properly that. And on weak turn, in weak turn, not a strong turn, sometimes we are deciding in the policy, either in EURA or Unity Cup, we are deciding to go to rest. But if we previously captured that we have this PAL icon, that means that we can have dates, and we can trigger some chain events, and those chain events will be better than going to rest. So, if we have a weak turn, and we know that we need energy, or we need recreation, we can just go back and take the recreation, and take the support PAL recreation.
-"""
-
-- @Rosetta: Speaking of Tazuna, I'd like to see an option that when auto rest is supposed to trigger and mood is below minimum, recreation takes priority
-"""
-Author notes: Again, something similar as before, so we're using this AutoRest, I think the default value is 20%, so if we are triggering the AutoRest option, before just selecting the Rest option, let's check if we have the PAL available, and if we have that, then we should then we should just take the recreation, that would be better, as I told you before, so it's something similar as before, but this is just regarding the lobby policy, I think, that you can review in the policies documentation.
-"""
-
-- IF auto rest and more than october in senior year and pal icon, let's go to use that even if mood is not great
-#### General UX:
-- Advanced settings: changing external processor takes too much time, improved 
-
-
-#### Unity Cup Policy:
-- Prioritize spirit on junior and classic. Reduce its score in Senior
-"""
-Author notes: This one is very important, because I think we need to increase the value of White Spirit. I think right now we are using 0.4, but if we are in Junior and Classic year, we should increase that by 2. Maybe we can just use 0.8, or well, let's just define a multiplier, we can change that later, but we should give more importance to White Spirit in Classic year and Junior year. In Senior year we should go back to the default values for White Spirit. And we should also give more importance to GPT-4 in Junior year. So, we are going to increase the value of GPT-4 in Junior year, and we are going to increase the value of GPT-4 in Senior year.And the same goes to the White Spirit combo and the Blue Spirit combo. We may want to increase those scores a little with a little multiplier like 1. I think we can define for each one, maybe we can use 1.2 multiplier for the combos or 1.5 maybe is better. And we should disable that if we notice that we are in either final season or in the senior year, in the third year.
-"""
-
-- Web UI, selector for first team opponent and the 'rest'
-"""
-Author notes: So, Unity Cup has some special races, I think they have 5 races, so we should include that in the web UI, a configuration, and in each race you need to select an opponent, I think right now we are selecting always the second opponent, the opponent in the middle, but by default we will have like 5 races I think, or well, for now let's just have 2 options, the first option is what to, well no, let's have an option for each race, so we will have 5 races, and by default in the first race we want to select the middle option, and the rest we want to select the top option, and I think the default one, if we don't know in which race we are, we should select the top option.
-"""
-
-
-- Configurable scoring system for: rainbow combo score, white spirit values (before senior / in senior), white spirit combo score, blue spirit value combo score
-"""
-Author notes: I have added some values for the combos, but I would like to also let the users configure this, but I don't want to show this directly in the UI. This is only for UnityCup preset. URA doesn't have the Blue Spirits or similar. In the UnityCup preset, we should have a section that says Advanced Settings in the preset where the bot policy is, I think at the end. If the user presses that Advanced Settings, we will open a new model, and inside that model we will have the scores, so they can set up the combo scores. The other ones may be the same.
-"""
-
-- Don't explode in overtrained stats (more than our 'stats caps' in our config)
-"""
-Author notes: If for some reason we already reached the cap level of a particular stat and that stat is allowed and that stat contains the blue spirit let's not explore that there, otherwise we will be wasting a turn, we will be wasting a stat except if we don't have another option but in general we don't want to explore that because the stat is already overtrained
-"""
-
-- Allowed / Disallowed stats for spirit burst.
-"""
-Author notes: So, we have the Spirit Burst, these explosions, that we should call them Spirit Burst. And here is the idea. Those are only triggered when you train with a blue flame, well, where a blue spirit is. So, if you press the blue spirit, you will consume that. And sometimes that blue spirit is in goods or in a particular stat that we don't want to explode, we don't want to press. So, we should put in a web UI an option to enable or disable some stats where we can do the burst.
-"""
-
-- prioritize exploding remanent blue explosions in previous 4 turns before Senior November early (we get skill here) ->. In Last two turns (URA finale), just explode wherever they are if we found a burst.
-"""
-Author notes: So, I noticed that the blue combo sometimes is not being exploded and we end the career, so we should detect from 4 turns before Dec or Nove early. We should check if we have a blue spirit and we should prioritize them, maybe we can multiply the value by 2 if we notice that we are in those dates, because before that event we will get a skill and the skill depends on how much blue spirit have we exploded, so we need to explode as much as possible. And I would say let's check from 4 turns before, but after Nove early, from Nove late, we should not take too much attention to blue spirit, except if we are in the last 2 turns in the UR Finale, in final season, usually final season has 3 turns, and you can check that probably in the goal, or in the turns left, well not in the goal, because in the goal you can see a text that says like Qualifier, another one Semi-Final, and another one Final, so maybe we can use that to understand in which turn are we now that we know we are in the final season. And if we notice that we are in the last 2 turns of the gameplay, we should just explode the blue spirits, it doesn't matter where they are, where they are.
-"""
-
-
-#### QoL:
-- @Rosetta:
-"""
-Speaking of presets, if it's not too hard could we please have a way of sorting them into tabs/groups or at least be able to change the order in which they are on the list? When you have a lot like I do having to keep pressing the arrows while looking through them all is quite the tedious task
-"""
-
-Tentative scheduled races:
-- If marked as tentative, bot may first check training tiles and if find a good SV will take it and ignore the tentative scheduled race (not tested at all)
+Bot Strategy (URA):
+- Adjusted risk for URA, was overcalculating dynamic risk
