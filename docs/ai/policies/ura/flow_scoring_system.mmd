@@ -1,0 +1,80 @@
+flowchart TD
+%% ============================================================================
+%% URA TILE SCORING (compute_support_values)
+%% ============================================================================
+
+START[Begin tile scoring] --> SUPPORTS{Process each support on tile}
+
+%% Reporter cameo
+SUPPORTS -->|Name support_etsuko| REPORTER[Add 0.10 reporter cameo]
+REPORTER --> SUPPORTS
+
+%% Director cameo
+SUPPORTS -->|Name support_director| DIRECTOR_COLOR{Director bar color}
+DIRECTOR_COLOR -->|Blue| DIR_BLUE[Add 0.25 director bonus]
+DIRECTOR_COLOR -->|Green| DIR_GREEN[Add 0.15 director bonus]
+DIRECTOR_COLOR -->|Orange| DIR_ORANGE[Add 0.10 director bonus]
+DIRECTOR_COLOR -->|Yellow or max| DIR_ZERO[Add 0.00 director bonus]
+DIR_BLUE --> SUPPORTS
+DIR_GREEN --> SUPPORTS
+DIR_ORANGE --> SUPPORTS
+DIR_ZERO --> SUPPORTS
+
+%% Tazuna cameo (URA PAL rules)
+SUPPORTS -->|Name support_tazuna| TAZUNA_COLOR{Tazuna bar color}
+TAZUNA_COLOR -->|Blue| TAZ_BLUE[Add 1.50 PAL bonus (blue)]
+TAZUNA_COLOR -->|Other| TAZ_OTHER[Add 0.15 PAL bonus (non-blue)]
+TAZ_BLUE --> SUPPORTS
+TAZ_OTHER --> SUPPORTS
+
+%% Kashimoto cameo (PAL or Director)
+SUPPORTS -->|Name support_kashimoto| KASH_MODE{Support type visible?}
+KASH_MODE -->|Type in SPD STA PWR GUTS WIT PAL| KASH_PAL[Kashimoto uses PAL values 1.50 blue, 0.15 otherwise]
+KASH_MODE -->|No support type| KASH_DIR[Kashimoto uses Director values 0.25 blue 0.15 green 0.10 orange]
+KASH_PAL --> SUPPORTS
+KASH_DIR --> SUPPORTS
+
+%% Standard support contributions
+SUPPORTS -->|Has rainbow| RAINBOW_ADD[Add 1.00 per rainbow card]
+RAINBOW_ADD --> SUPPORTS
+
+SUPPORTS -->|Blue or green bar| BAR_ADD[Add 1.00 per card with blue or green bar]
+BAR_ADD --> SUPPORTS
+
+SUPPORTS -->|Has hint| HINT_CAPTURE[Collect hint candidate (blue/green vs orange/max)]
+HINT_CAPTURE --> SUPPORTS
+
+SUPPORTS -->|No special case remaining| SUPPORTS_DONE[All supports processed]
+
+%% Hint resolution (tile-capped)
+SUPPORTS_DONE --> HINT_STAGE{Best hint among enabled candidates?}
+HINT_STAGE -->|Blue/green bucket wins| HINT_BLUE[Best blue/green hint value]
+HINT_STAGE -->|Orange/max bucket wins| HINT_ORANGE[Best orange/max hint value]
+HINT_BLUE --> HINT_MULT[Apply HINT_IS_IMPORTANT multiplier if enabled]
+HINT_ORANGE --> HINT_MULT
+HINT_STAGE -->|No enabled hint| HINT_SKIPPED[No hint bonus]
+HINT_MULT --> RAINBOW_COMBO
+HINT_SKIPPED --> RAINBOW_COMBO
+
+%% Rainbow combo bonus (any type)
+RAINBOW_COMBO -->|Rainbow count >= 2| RAINBOW_COMBO_ADD[Add 0.50 once when 2+ rainbows]
+RAINBOW_COMBO -->|Rainbow count < 2| RISK_STAGE
+RAINBOW_COMBO_ADD --> RISK_STAGE
+
+%% Risk scaling and final flags (URA)
+RISK_STAGE --> RISK_MULT{Computed SV total}
+RISK_MULT -->|SV >= 5.0| RISK_X2[Risk limit = base * 2.00]
+RISK_MULT -->|SV >= 3.5 and no important hint| RISK_X1_5[Risk limit = base * 1.50]
+RISK_MULT -->|SV >= 2.75 and no important hint| RISK_X1_35[Risk limit = base * 1.35]
+RISK_MULT -->|SV >= 2.25| RISK_X1_25[Risk limit = base * 1.25]
+RISK_MULT -->|Otherwise| RISK_BASE[Risk limit = base * 1.00]
+RISK_X2 --> GREEDY_GATE
+RISK_X1_5 --> GREEDY_GATE
+RISK_X1_35 --> GREEDY_GATE
+RISK_X1_25 --> GREEDY_GATE
+RISK_BASE --> GREEDY_GATE
+
+GREEDY_GATE -->|SV >= 2.5 and failure <= risk limit| GREEDY_HIT[Set greedy_hit true]
+GREEDY_GATE -->|Else| GREEDY_SKIP[Set greedy_hit false]
+GREEDY_HIT --> END[Return TileSV with totals and notes]
+GREEDY_SKIP --> END
