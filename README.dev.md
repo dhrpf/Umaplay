@@ -53,7 +53,7 @@ cls && python scrape_events.py --characters-card "105602-matikanefukukitaru,1028
 - `--characters-card` and `--supports-card` can be used at the same time.
 - Replace `--characters-card` and `--supports-card` with a comma-separated list that covers any new supports and characters you expect in the scrape.
 - `--skills` path to `json` file to look for skills `id` that is related to events and get its name. `default: in_game/skills.json`
-- `--status` path to `json` file look for status `id` that is related to events and get its name. `default: in_game/status.json`
+- `--status` path to `json` file to look for status `id` that is related to events and get its name. `default: in_game/status.json`
 - `--period` select period to scrape from \*remove to scrape post first anniversary data\* 
 - `--images` download card images `default: false`
 - `--img-dir` target folder for images `default: images`
