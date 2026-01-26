@@ -123,6 +123,29 @@ def patch_pygetwindow_for_linux():
                 self._wid = wid
                 self.title = title
                 self._hWnd = wid  # For compatibility
+                self.isMinimized = False  # Assume not minimized
+                
+            def minimize(self):
+                """Minimize window using xdotool."""
+                try:
+                    subprocess.run(['xdotool', 'windowminimize', str(self._wid)], timeout=1)
+                except:
+                    pass
+                    
+            def restore(self):
+                """Restore window using wmctrl."""
+                try:
+                    subprocess.run(['wmctrl', '-i', '-a', str(self._wid)], timeout=1)
+                except:
+                    pass
+                    
+            def activate(self):
+                """Activate/focus window using xdotool."""
+                try:
+                    subprocess.run(['xdotool', 'windowactivate', str(self._wid)], timeout=1)
+                    logger.debug(f"Activated window {self._wid}")
+                except Exception as e:
+                    logger.debug(f"Failed to activate window: {e}")
                 
             def __repr__(self):
                 return f"LinuxWindow(title='{self.title}')"
@@ -201,11 +224,16 @@ def patch_win32_for_linux():
             logger.debug(f"Mock win32 function called (Linux)")
             return None
         
+        def mock_is_window(hwnd):
+            """Mock IsWindow - always return True."""
+            return True
+        
         win32gui.FindWindow = mock_function
         win32gui.SetForegroundWindow = mock_function
         win32gui.ShowWindow = mock_function
         win32gui.GetWindowText = mock_function
         win32gui.IsWindowVisible = mock_function
+        win32gui.IsWindow = mock_is_window
         win32gui.EnumWindows = mock_function
         win32gui.GetWindowRect = mock_function
         
