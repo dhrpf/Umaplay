@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 # Try to detect the best keyboard library
 _use_pynput = False
 _keyboard_available = False
+_pynput_keyboard = None
 
 try:
     import keyboard
@@ -18,8 +19,8 @@ except ImportError:
     logger.debug("keyboard library not available")
 
 try:
-    import pynput
     from pynput import keyboard as pynput_keyboard
+    _pynput_keyboard = pynput_keyboard
     _use_pynput = True
     logger.debug("pynput library available")
 except ImportError:
@@ -44,7 +45,7 @@ class HotkeyManager:
     def __init__(self):
         self.use_pynput = not _keyboard_available and _use_pynput
         self.registered_keys: Set[str] = set()
-        self._pynput_listener: Optional[pynput_keyboard.Listener] = None
+        self._pynput_listener = None
         self._pynput_callbacks = {}
         
         if self.use_pynput:
@@ -102,25 +103,32 @@ class HotkeyManager:
     
     def _parse_key(self, key_str: str):
         """Convert key string to pynput Key object."""
+        if _pynput_keyboard is None:
+            return None
+            
         key_str = key_str.lower()
         
         # Function keys
         if key_str.startswith('f') and key_str[1:].isdigit():
             fn_num = int(key_str[1:])
-            return getattr(pynput_keyboard.Key, f'f{fn_num}', None)
+            return getattr(_pynput_keyboard.Key, f'f{fn_num}', None)
         
         # Special keys
         key_map = {
-            'esc': pynput_keyboard.Key.esc,
-            'enter': pynput_keyboard.Key.enter,
-            'space': pynput_keyboard.Key.space,
-            'tab': pynput_keyboard.Key.tab,
+            'esc': _pynput_keyboard.Key.esc,
+            'enter': _pynput_keyboard.Key.enter,
+            'space': _pynput_keyboard.Key.space,
+            'tab': _pynput_keyboard.Key.tab,
         }
         
         return key_map.get(key_str, key_str)
     
     def _start_pynput_listener(self):
         """Start the pynput keyboard listener."""
+        if _pynput_keyboard is None:
+            logger.error("Cannot start pynput listener - pynput not available")
+            return
+            
         def on_press(key):
             for registered_key, (callback, trigger_on_release) in self._pynput_callbacks.items():
                 if key == registered_key and not trigger_on_release:
@@ -137,7 +145,7 @@ class HotkeyManager:
                     except Exception as e:
                         logger.error(f"Hotkey callback error: {e}")
         
-        self._pynput_listener = pynput_keyboard.Listener(
+        self._pynput_listener = _pynput_keyboard.Listener(
             on_press=on_press,
             on_release=on_release
         )
