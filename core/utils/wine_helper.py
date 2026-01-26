@@ -124,6 +124,39 @@ def patch_pygetwindow_for_linux():
                 self.title = title
                 self._hWnd = wid  # For compatibility
                 self.isMinimized = False  # Assume not minimized
+                self._geometry = None  # Cache geometry
+                
+            def get_geometry(self):
+                """Get window geometry using xdotool."""
+                if self._geometry:
+                    return self._geometry
+                try:
+                    result = subprocess.run(['xdotool', 'getwindowgeometry', str(self._wid)],
+                                          capture_output=True, text=True, timeout=1)
+                    if result.returncode == 0:
+                        # Parse output like: "Position: 100,200 (screen: 0)"
+                        #                    "Geometry: 1920x1080"
+                        lines = result.stdout.strip().split('\n')
+                        pos_line = [l for l in lines if 'Position:' in l]
+                        geo_line = [l for l in lines if 'Geometry:' in l]
+                        
+                        if pos_line and geo_line:
+                            # Extract position
+                            pos_str = pos_line[0].split('Position:')[1].split('(')[0].strip()
+                            x, y = map(int, pos_str.split(','))
+                            
+                            # Extract size
+                            geo_str = geo_line[0].split('Geometry:')[1].strip()
+                            w, h = map(int, geo_str.split('x'))
+                            
+                            self._geometry = (x, y, w, h)
+                            logger.debug(f"Window geometry: {self._geometry}")
+                            return self._geometry
+                except Exception as e:
+                    logger.debug(f"Failed to get window geometry: {e}")
+                
+                # Fallback to dummy values
+                return (0, 0, 1920, 1080)
                 
             def minimize(self):
                 """Minimize window using xdotool."""
@@ -193,6 +226,7 @@ def patch_win32_for_linux():
     This allows the code to import but not actually use Windows APIs.
     """
     import sys as sys_module
+    import subprocess
     
     if not sys_module.platform.startswith("linux"):
         return
@@ -233,12 +267,36 @@ def patch_win32_for_linux():
             return True
             
         def mock_get_client_rect(hwnd):
-            """Mock GetClientRect - return dummy rect."""
-            return (0, 0, 1920, 1080)  # Dummy window size
+            """Mock GetClientRect - try to get real geometry from xdotool."""
+            try:
+                result = subprocess.run(['xdotool', 'getwindowgeometry', str(hwnd)],
+                                      capture_output=True, text=True, timeout=1)
+                if result.returncode == 0:
+                    lines = result.stdout.strip().split('\n')
+                    geo_line = [l for l in lines if 'Geometry:' in l]
+                    if geo_line:
+                        geo_str = geo_line[0].split('Geometry:')[1].strip()
+                        w, h = map(int, geo_str.split('x'))
+                        return (0, 0, w, h)
+            except:
+                pass
+            return (0, 0, 1920, 1080)  # Fallback
             
         def mock_client_to_screen(hwnd, point):
-            """Mock ClientToScreen - return point as-is."""
-            return point
+            """Mock ClientToScreen - add window position to point."""
+            try:
+                result = subprocess.run(['xdotool', 'getwindowgeometry', str(hwnd)],
+                                      capture_output=True, text=True, timeout=1)
+                if result.returncode == 0:
+                    lines = result.stdout.strip().split('\n')
+                    pos_line = [l for l in lines if 'Position:' in l]
+                    if pos_line:
+                        pos_str = pos_line[0].split('Position:')[1].split('(')[0].strip()
+                        x, y = map(int, pos_str.split(','))
+                        return (point[0] + x, point[1] + y)
+            except:
+                pass
+            return point  # Fallback
         
         win32gui.FindWindow = mock_function
         win32gui.SetForegroundWindow = mock_function
@@ -263,6 +321,51 @@ def patch_win32_for_linux():
         logger.warning(f"Failed to create mock win32 modules: {e}")
 
 
+def patch_imagegrab_for_linux():
+    """
+    Patch PIL.ImageGrab to use pyautogui on Linux.
+    ImageGrab.grab() doesn't work on Linux, so we redirect to pyautogui.screenshot().
+    """
+    import sys as sys_module
+    
+    if not sys_module.platform.startswith("linux"):
+        return
+    
+    try:
+        from PIL import ImageGrab
+        import pyautogui
+        
+        # Store original (will fail on Linux anyway)
+        _original_grab = ImageGrab.grab
+        
+        def linux_grab(bbox=None, include_layered_windows=False, all_screens=False, xdisplay=None):
+            """Linux-compatible screenshot using pyautogui."""
+            logger.debug(f"ImageGrab.grab() called on Linux with bbox={bbox}")
+            
+            if bbox:
+                # bbox is (left, top, right, bottom)
+                left, top, right, bottom = bbox
+                width = right - left
+                height = bottom - top
+                
+                # Use pyautogui to capture region
+                img = pyautogui.screenshot(region=(left, top, width, height))
+                logger.debug(f"Captured region: {left},{top} {width}x{height}")
+                return img
+            else:
+                # Full screen
+                img = pyautogui.screenshot()
+                logger.debug(f"Captured full screen: {img.size}")
+                return img
+        
+        # Replace ImageGrab.grab
+        ImageGrab.grab = linux_grab
+        logger.info("Patched PIL.ImageGrab for Linux using pyautogui")
+        
+    except Exception as e:
+        logger.warning(f"Failed to patch ImageGrab for Linux: {e}")
+
+
 # Auto-detect and apply patches on import
 _is_wine = is_running_under_wine()
 if _is_wine:
@@ -271,5 +374,6 @@ elif sys.platform.startswith("linux"):
     logger.info("Linux detected - patching for compatibility")
     patch_win32_for_linux()
     patch_pygetwindow_for_linux()
+    patch_imagegrab_for_linux()
 else:
     logger.debug("Running on native Windows or non-Wine environment")
