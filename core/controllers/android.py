@@ -5,6 +5,12 @@ import random
 import time
 from typing import Optional, Tuple, Union
 
+# Import wine_helper FIRST to patch pygetwindow before it's imported
+try:
+    from core.utils import wine_helper
+except ImportError:
+    pass
+
 import pyautogui
 import pygetwindow as gw
 from PIL import ImageGrab, Image
@@ -15,12 +21,6 @@ import win32gui
 
 from core.controllers.base import IController, RegionXYWH
 from core.types import XYXY
-
-# Import wine_helper to auto-apply patches if running under Wine
-try:
-    from core.utils import wine_helper
-except ImportError:
-    pass
 
 
 class ScrcpyController(IController):

@@ -100,43 +100,107 @@ def find_window_wine_compatible(window_title: str) -> Optional[int]:
     return None
 
 
-def patch_pygetwindow_for_wine():
+def patch_pygetwindow_for_linux():
     """
-    Apply patches to pygetwindow for better Wine compatibility.
-    This is called automatically when Wine is detected.
+    Patch pygetwindow to work on Linux (even without Wine).
+    This prevents the NotImplementedError on Linux systems.
     """
-    if not is_running_under_wine():
+    import sys as sys_module
+    
+    if not sys_module.platform.startswith("linux"):
         return
     
     try:
-        import pygetwindow as gw
+        import types
         
-        # Store original function
-        original_get_all_windows = gw.getAllWindows
+        # Create a mock pygetwindow module
+        mock_gw = types.ModuleType('pygetwindow')
         
-        def wine_compatible_get_all_windows():
-            """Patched version that handles Wine window enumeration issues."""
-            try:
-                return original_get_all_windows()
-            except Exception as e:
-                logger.warning(f"pygetwindow.getAllWindows failed under Wine: {e}")
-                # Return empty list as fallback
-                return []
+        def getAllWindows():
+            """Mock function that returns empty list on Linux."""
+            logger.debug("pygetwindow.getAllWindows() called on Linux - returning empty list")
+            return []
         
-        # Apply patch
-        gw.getAllWindows = wine_compatible_get_all_windows
-        logger.info("Applied Wine compatibility patches to pygetwindow")
+        def getWindowsWithTitle(title):
+            """Mock function that returns empty list on Linux."""
+            logger.debug(f"pygetwindow.getWindowsWithTitle('{title}') called on Linux - returning empty list")
+            return []
         
-    except ImportError:
-        logger.debug("pygetwindow not available, skipping Wine patches")
+        mock_gw.getAllWindows = getAllWindows
+        mock_gw.getWindowsWithTitle = getWindowsWithTitle
+        
+        # Inject the mock module
+        sys_module.modules['pygetwindow'] = mock_gw
+        logger.info("Patched pygetwindow for Linux compatibility")
+        
     except Exception as e:
-        logger.warning(f"Failed to patch pygetwindow for Wine: {e}")
+        logger.warning(f"Failed to patch pygetwindow for Linux: {e}")
 
 
-# Auto-detect and log Wine environment on import
+def patch_win32_for_linux():
+    """
+    Create mock win32 modules for Linux.
+    This allows the code to import but not actually use Windows APIs.
+    """
+    import sys as sys_module
+    
+    if not sys_module.platform.startswith("linux"):
+        return
+    
+    try:
+        import types
+        import ctypes
+        
+        # Mock ctypes.windll if it doesn't exist
+        if not hasattr(ctypes, 'windll'):
+            mock_windll = types.SimpleNamespace()
+            mock_user32 = types.SimpleNamespace()
+            mock_windll.user32 = mock_user32
+            ctypes.windll = mock_windll
+            logger.debug("Mocked ctypes.windll for Linux")
+        
+        # Create mock win32 modules
+        win32con = types.ModuleType('win32con')
+        win32gui = types.ModuleType('win32gui')
+        win32api = types.ModuleType('win32api')
+        win32process = types.ModuleType('win32process')
+        
+        # Add common constants
+        win32con.SW_RESTORE = 9
+        win32con.SW_MINIMIZE = 6
+        
+        # Add mock functions
+        def mock_function(*args, **kwargs):
+            logger.debug(f"Mock win32 function called (Linux)")
+            return None
+        
+        win32gui.FindWindow = mock_function
+        win32gui.SetForegroundWindow = mock_function
+        win32gui.ShowWindow = mock_function
+        win32gui.GetWindowText = mock_function
+        win32gui.IsWindowVisible = mock_function
+        win32gui.EnumWindows = mock_function
+        win32gui.GetWindowRect = mock_function
+        
+        # Inject mock modules
+        sys_module.modules['win32con'] = win32con
+        sys_module.modules['win32gui'] = win32gui
+        sys_module.modules['win32api'] = win32api
+        sys_module.modules['win32process'] = win32process
+        
+        logger.info("Created mock win32 modules for Linux compatibility")
+        
+    except Exception as e:
+        logger.warning(f"Failed to create mock win32 modules: {e}")
+
+
+# Auto-detect and apply patches on import
 _is_wine = is_running_under_wine()
 if _is_wine:
     logger.info("Wine environment detected - applying compatibility patches")
-    patch_pygetwindow_for_wine()
+elif sys.platform.startswith("linux"):
+    logger.info("Linux detected - patching for compatibility")
+    patch_win32_for_linux()
+    patch_pygetwindow_for_linux()
 else:
     logger.debug("Running on native Windows or non-Wine environment")
