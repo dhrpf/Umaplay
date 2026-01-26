@@ -323,8 +323,8 @@ def patch_win32_for_linux():
 
 def patch_imagegrab_for_linux():
     """
-    Patch PIL.ImageGrab to use scrot on Linux.
-    ImageGrab.grab() doesn't work on Linux, so we use scrot command-line tool.
+    Patch PIL.ImageGrab to use mss on Linux.
+    mss is fast, silent, and works great with multi-monitor setups.
     """
     import sys as sys_module
     
@@ -333,55 +333,45 @@ def patch_imagegrab_for_linux():
     
     try:
         from PIL import ImageGrab, Image
-        import subprocess
-        import tempfile
-        import os
+        import mss
         
         # Store original (will fail on Linux anyway)
         _original_grab = ImageGrab.grab
         
         def linux_grab(bbox=None, include_layered_windows=False, all_screens=False, xdisplay=None):
-            """Linux-compatible screenshot using import (ImageMagick)."""
+            """Linux-compatible screenshot using mss (fast and silent)."""
             
             try:
-                # Use import to capture screenshot
-                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                    tmp_path = tmp.name
-                
-                if bbox:
-                    # bbox is (left, top, right, bottom)
-                    left, top, right, bottom = bbox
-                    width = right - left
-                    height = bottom - top
-                    
-                    if width <= 0 or height <= 0:
-                        logger.warning(f"Invalid bbox: {bbox}, using full screen")
-                        subprocess.run(['import', '-window', 'root', tmp_path], 
-                                     capture_output=True, timeout=2, check=True)
+                with mss.mss() as sct:
+                    if bbox:
+                        # bbox is (left, top, right, bottom)
+                        left, top, right, bottom = bbox
+                        width = right - left
+                        height = bottom - top
+                        
+                        # mss monitor format
+                        monitor = {
+                            "left": left,
+                            "top": top,
+                            "width": width,
+                            "height": height
+                        }
+                        
+                        # Capture the region
+                        screenshot = sct.grab(monitor)
+                        
+                        # Convert to PIL Image
+                        img = Image.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
+                        logger.debug(f"Captured region: {img.size}")
+                        return img
                     else:
-                        # Use import with crop geometry (WIDTHxHEIGHT+X+Y)
-                        geometry = f'{width}x{height}+{left}+{top}'
-                        logger.debug(f"Capturing with geometry: {geometry}")
-                        subprocess.run(['import', '-window', 'root', '-crop', geometry, tmp_path],
-                                     capture_output=True, timeout=2, check=True)
-                else:
-                    # Full screen
-                    subprocess.run(['import', '-window', 'root', tmp_path], 
-                                 capture_output=True, timeout=2, check=True)
-                
-                # Load the image
-                img = Image.open(tmp_path)
-                img.load()  # Load into memory
-                
-                # Clean up temp file
-                try:
-                    os.unlink(tmp_path)
-                except:
-                    pass
-                
-                logger.debug(f"Captured screenshot: {img.size}")
-                return img
-                
+                        # Full screen - capture primary monitor
+                        monitor = sct.monitors[1]  # Primary monitor
+                        screenshot = sct.grab(monitor)
+                        img = Image.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
+                        logger.debug(f"Captured full screen: {img.size}")
+                        return img
+                        
             except Exception as e:
                 logger.error(f"Screenshot failed: {e}")
                 # Return a blank image as fallback
@@ -389,7 +379,7 @@ def patch_imagegrab_for_linux():
         
         # Replace ImageGrab.grab
         ImageGrab.grab = linux_grab
-        logger.info("Patched PIL.ImageGrab for Linux using scrot")
+        logger.info("Patched PIL.ImageGrab for Linux using mss (fast & silent)")
         
     except Exception as e:
         logger.warning(f"Failed to patch ImageGrab for Linux: {e}")
