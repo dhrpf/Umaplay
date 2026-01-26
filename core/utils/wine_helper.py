@@ -102,7 +102,7 @@ def find_window_wine_compatible(window_title: str) -> Optional[int]:
 
 def patch_pygetwindow_for_linux():
     """
-    Patch pygetwindow to work on Linux (even without Wine).
+    Patch pygetwindow to work on Linux using native X11 tools.
     This prevents the NotImplementedError on Linux systems.
     """
     import sys as sys_module
@@ -112,26 +112,53 @@ def patch_pygetwindow_for_linux():
     
     try:
         import types
+        import subprocess
         
-        # Create a mock pygetwindow module
+        # Create a mock pygetwindow module with Linux functionality
         mock_gw = types.ModuleType('pygetwindow')
         
+        class LinuxWindow:
+            """Mock Window class for Linux."""
+            def __init__(self, wid, title):
+                self._wid = wid
+                self.title = title
+                self._hWnd = wid  # For compatibility
+                
+            def __repr__(self):
+                return f"LinuxWindow(title='{self.title}')"
+        
         def getAllWindows():
-            """Mock function that returns empty list on Linux."""
-            logger.debug("pygetwindow.getAllWindows() called on Linux - returning empty list")
+            """Get all windows using xdotool."""
+            try:
+                result = subprocess.run(['xdotool', 'search', '--name', '.'], 
+                                      capture_output=True, text=True, timeout=2)
+                if result.returncode == 0:
+                    windows = []
+                    for wid in result.stdout.strip().split('\n'):
+                        if wid:
+                            title_result = subprocess.run(['xdotool', 'getwindowname', wid],
+                                                        capture_output=True, text=True, timeout=1)
+                            if title_result.returncode == 0:
+                                windows.append(LinuxWindow(wid, title_result.stdout.strip()))
+                    logger.debug(f"Found {len(windows)} windows on Linux")
+                    return windows
+            except Exception as e:
+                logger.debug(f"xdotool not available: {e}")
             return []
         
         def getWindowsWithTitle(title):
-            """Mock function that returns empty list on Linux."""
-            logger.debug(f"pygetwindow.getWindowsWithTitle('{title}') called on Linux - returning empty list")
-            return []
+            """Get windows matching title."""
+            all_windows = getAllWindows()
+            matching = [w for w in all_windows if w.title.strip() == title.strip()]
+            logger.debug(f"Found {len(matching)} windows matching '{title}'")
+            return matching
         
         mock_gw.getAllWindows = getAllWindows
         mock_gw.getWindowsWithTitle = getWindowsWithTitle
         
         # Inject the mock module
         sys_module.modules['pygetwindow'] = mock_gw
-        logger.info("Patched pygetwindow for Linux compatibility")
+        logger.info("Patched pygetwindow for Linux with xdotool support")
         
     except Exception as e:
         logger.warning(f"Failed to patch pygetwindow for Linux: {e}")
