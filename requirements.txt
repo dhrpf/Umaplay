@@ -28,6 +28,7 @@ iniconfig==2.3.0
 Jinja2==3.1.6
 joblib==1.5.2
 keyboard==0.13.5
+pynput
 kiwisolver==1.4.9
 MarkupSafe==3.0.3
 matplotlib==3.10.7
@@ -71,7 +72,7 @@ python-dateutil==2.9.0.post0
 pytweening==1.2.0
 pytz==2025.2
 PyWavelets==1.8.0
-pywin32==311
+pywin32-ctypes
 PyYAML==6.0.2
 RapidFuzz==3.14.1
 requests==2.32.5
