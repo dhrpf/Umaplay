@@ -341,11 +341,10 @@ def patch_imagegrab_for_linux():
         _original_grab = ImageGrab.grab
         
         def linux_grab(bbox=None, include_layered_windows=False, all_screens=False, xdisplay=None):
-            """Linux-compatible screenshot using scrot."""
-            logger.debug(f"ImageGrab.grab() called on Linux with bbox={bbox}")
+            """Linux-compatible screenshot using import (ImageMagick)."""
             
             try:
-                # Use scrot to capture screenshot
+                # Use import to capture screenshot
                 with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
                     tmp_path = tmp.name
                 
@@ -355,13 +354,20 @@ def patch_imagegrab_for_linux():
                     width = right - left
                     height = bottom - top
                     
-                    # Use scrot with geometry (format: WIDTHxHEIGHT+X+Y)
-                    geometry = f'{width}x{height}+{left}+{top}'
-                    subprocess.run(['scrot', '-a', geometry, tmp_path],
-                                 capture_output=True, timeout=2, check=True)
+                    if width <= 0 or height <= 0:
+                        logger.warning(f"Invalid bbox: {bbox}, using full screen")
+                        subprocess.run(['import', '-window', 'root', tmp_path], 
+                                     capture_output=True, timeout=2, check=True)
+                    else:
+                        # Use import with crop geometry (WIDTHxHEIGHT+X+Y)
+                        geometry = f'{width}x{height}+{left}+{top}'
+                        logger.debug(f"Capturing with geometry: {geometry}")
+                        subprocess.run(['import', '-window', 'root', '-crop', geometry, tmp_path],
+                                     capture_output=True, timeout=2, check=True)
                 else:
                     # Full screen
-                    subprocess.run(['scrot', tmp_path], capture_output=True, timeout=2, check=True)
+                    subprocess.run(['import', '-window', 'root', tmp_path], 
+                                 capture_output=True, timeout=2, check=True)
                 
                 # Load the image
                 img = Image.open(tmp_path)
@@ -379,7 +385,7 @@ def patch_imagegrab_for_linux():
             except Exception as e:
                 logger.error(f"Screenshot failed: {e}")
                 # Return a blank image as fallback
-                return Image.new('RGB', (1920, 1080), color='black')
+                return Image.new('RGB', (100, 100), color='black')
         
         # Replace ImageGrab.grab
         ImageGrab.grab = linux_grab
