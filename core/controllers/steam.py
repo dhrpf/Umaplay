@@ -5,12 +5,18 @@ from typing import Any, Optional, Tuple, Union
 import pyautogui
 import pygetwindow as gw
 
-# Requires pywin32
+# Requires pywin32-ctypes (Wine-compatible)
 import win32con
 import win32gui
 
 from core.controllers.base import IController, RegionXYWH
 from core.types import XYXY
+
+# Import wine_helper to auto-apply patches if running under Wine
+try:
+    from core.utils import wine_helper
+except ImportError:
+    pass
 
 
 class SteamController(IController):
