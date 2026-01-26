@@ -227,13 +227,27 @@ def patch_win32_for_linux():
         def mock_is_window(hwnd):
             """Mock IsWindow - always return True."""
             return True
+            
+        def mock_is_window_visible(hwnd):
+            """Mock IsWindowVisible - always return True."""
+            return True
+            
+        def mock_get_client_rect(hwnd):
+            """Mock GetClientRect - return dummy rect."""
+            return (0, 0, 1920, 1080)  # Dummy window size
+            
+        def mock_client_to_screen(hwnd, point):
+            """Mock ClientToScreen - return point as-is."""
+            return point
         
         win32gui.FindWindow = mock_function
         win32gui.SetForegroundWindow = mock_function
         win32gui.ShowWindow = mock_function
         win32gui.GetWindowText = mock_function
-        win32gui.IsWindowVisible = mock_function
+        win32gui.IsWindowVisible = mock_is_window_visible
         win32gui.IsWindow = mock_is_window
+        win32gui.GetClientRect = mock_get_client_rect
+        win32gui.ClientToScreen = mock_client_to_screen
         win32gui.EnumWindows = mock_function
         win32gui.GetWindowRect = mock_function
         
