@@ -145,7 +145,7 @@ python -m pip install paddlex
    python main.py
    ```
 
-* Press **F2** to **start/stop** the bot during gameplay. Or F7, F8, F9 depending on your configs.
+* Press **F2** to **start/stop** the bot during gameplay (YOU MUST BE on **career lobby screen** (the one with the Tazuna hint icon)). Or F7, F8, F9 depending on your configs.
 
 ---
 
@@ -156,7 +156,7 @@ I regularly push new updates and bug fixes. To update:
 **Option 1: Using Web UI (Easiest)**
 - Use the **Pull from GitHub** button in the Web UI
 - There's also a **Force Update** button if needed
-- Restart the bot after updating
+- **Restart the bot after updating. Close all terminals / IDEs and do a fresh start**
 
 ![Pull button](assets/doc/git_pull.png)
 
@@ -168,6 +168,8 @@ git reset --hard
 git pull
 pip install -r requirements.txt
 ```
+
+Then **Restart the bot after updating. Close all terminals / IDEs and do a fresh start**
 
 > ⚠️ **Note**: `git reset --hard` will discard any local changes you made to files.
 
