@@ -4,6 +4,10 @@
 import sys
 import os
 
+OK = "[OK]"
+ERR = "[ERR]"
+WARN = "[WARN]"
+
 print("=" * 60)
 print("Umaplay Wine Support - Verification Test")
 print("=" * 60)
@@ -13,14 +17,14 @@ print("\n[Test 1] Wine Helper Module")
 try:
     from core.utils.wine_helper import is_running_under_wine, find_window_wine_compatible
     wine_detected = is_running_under_wine()
-    print(f"  ✓ Wine helper imported successfully")
-    print(f"  ✓ Wine detected: {wine_detected}")
+    print(f"  {OK} Wine helper imported successfully")
+    print(f"  {OK} Wine detected: {wine_detected}")
     if wine_detected:
         print(f"    - Running under Wine environment")
     else:
         print(f"    - Running on native platform")
 except Exception as e:
-    print(f"  ✗ Error: {e}")
+    print(f"  {ERR} Error: {e}")
     sys.exit(1)
 
 # Test 2: Hotkey Manager
@@ -28,17 +32,17 @@ print("\n[Test 2] Hotkey Manager")
 try:
     from core.utils.hotkey_manager import get_hotkey_manager
     mgr = get_hotkey_manager()
-    print(f"  ✓ Hotkey manager created")
-    print(f"  ✓ Using pynput: {mgr.use_pynput}")
+    print(f"  {OK} Hotkey manager created")
+    print(f"  {OK} Using pynput: {mgr.use_pynput}")
     
     # Try to register a test hotkey (won't actually work without keyboard lib)
     result = mgr.add_hotkey('f12', lambda: None)
     if result:
-        print(f"  ✓ Hotkey registration works")
+        print(f"  {OK} Hotkey registration works")
     else:
-        print(f"  ⚠ Hotkey registration returned False (expected if no keyboard lib)")
+        print(f"  {WARN} Hotkey registration returned False (expected if no keyboard lib)")
 except Exception as e:
-    print(f"  ✗ Error: {e}")
+    print(f"  {ERR} Error: {e}")
     sys.exit(1)
 
 # Test 3: Controller Syntax
@@ -55,18 +59,18 @@ for module_name, class_name in controllers:
         import py_compile
         module_path = module_name.replace('.', '/') + '.py'
         py_compile.compile(module_path, doraise=True)
-        print(f"  ✓ {class_name} syntax valid")
+        print(f"  {OK} {class_name} syntax valid")
     except Exception as e:
-        print(f"  ✗ {class_name} error: {e}")
+        print(f"  {ERR} {class_name} error: {e}")
 
 # Test 4: Main.py Syntax
 print("\n[Test 4] Main Application (syntax check)")
 try:
     import py_compile
     py_compile.compile('main.py', doraise=True)
-    print(f"  ✓ main.py syntax valid")
+    print(f"  {OK} main.py syntax valid")
 except Exception as e:
-    print(f"  ✗ main.py error: {e}")
+    print(f"  {ERR} main.py error: {e}")
     sys.exit(1)
 
 # Test 5: Simulate Wine Environment
@@ -84,21 +88,21 @@ try:
     wine_detected = is_running_under_wine()
     
     if wine_detected:
-        print(f"  ✓ Wine detection works with WINEPREFIX env var")
+        print(f"  {OK} Wine detection works with WINEPREFIX env var")
     else:
-        print(f"  ⚠ Wine not detected (may need actual Wine registry)")
+        print(f"  {WARN} Wine not detected (may need actual Wine registry)")
     
     # Clean up
     del os.environ['WINEPREFIX']
 except Exception as e:
-    print(f"  ✗ Error: {e}")
+    print(f"  {ERR} Error: {e}")
 
 # Summary
 print("\n" + "=" * 60)
 print("Test Summary")
 print("=" * 60)
-print("✓ All critical tests passed!")
-print("✓ Wine support implementation is functional")
+print(f"{OK} All critical tests passed!")
+print(f"{OK} Wine support implementation is functional")
 print("\nNote: Full functionality requires:")
 print("  - keyboard or pynput library installed")
 print("  - pywin32-ctypes installed")
