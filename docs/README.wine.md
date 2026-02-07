@@ -1,15 +1,71 @@
-# Running Umaplay under Wine on Linux
+# Running Umaplay on Linux
 
-This guide explains how to run Umaplay on Linux using Wine, allowing you to play Umamusume: Pretty Derby through Steam or other Windows-based methods.
+This guide explains how to run Umaplay on Linux, either natively or using Wine for the Windows version of Umamusume: Pretty Derby.
 
 ## Prerequisites
 
 - Linux distribution (Ubuntu, Fedora, Arch, etc.)
-- Wine 8.0 or newer (Wine 9.0+ recommended)
-- Python 3.10 or newer
+- Miniconda or Anaconda
 - Git
+- Wine 8.0+ (if running Windows version of the game)
 
-## Installation Steps
+## Quick Start: Native Linux Testing
+
+### 1. Install Miniconda (if not already installed)
+
+```bash
+# Download and install Miniconda
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
+
+# Initialize conda for your shell
+~/miniconda3/bin/conda init bash
+# Then restart your terminal or run:
+source ~/.bashrc
+```
+
+### 2. Clone and Set Up Umaplay
+
+```bash
+cd ~
+git clone https://github.com/Magody/Umaplay.git
+cd Umaplay
+
+# Create conda environment
+conda create -n env_uma python=3.10
+
+# Activate environment
+conda activate env_uma
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 3. Install Linux System Dependencies
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install xdotool python3-tk python3-dev
+
+# Fedora
+sudo dnf install xdotool python3-tkinter python3-devel
+
+# Arch
+sudo pacman -S xdotool tk
+```
+
+### 4. Run Test Script
+
+```bash
+# Verify everything works
+./test_linux_venv.sh
+```
+
+## Running with Wine (Windows Game Version)
+
+If you want to run the Windows version of Umamusume through Wine:
 
 ### 1. Install Wine
 
@@ -186,6 +242,22 @@ For better performance under Wine:
 Add these to your launch script for permanent effect.
 
 ## Troubleshooting
+
+### Native Linux Issues
+
+**Issue: "No keyboard library available"**
+- Expected on Linux without Wine
+- Hotkey manager will use pynput instead
+
+**Issue: Import errors**
+- Run: `./test_linux_venv.sh` to verify setup
+- Ensure all dependencies installed: `pip install -r requirements.txt`
+
+**Issue: Window not detected**
+- Verify xdotool is installed: `which xdotool`
+- Test window detection: `xdotool search --name "uma"`
+
+### Wine-Specific Issues
 
 ### Issue: Hotkeys (F2, F7, F8, F9) Not Working
 
