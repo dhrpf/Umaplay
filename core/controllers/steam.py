@@ -70,9 +70,14 @@ class SteamController(IController):
             try:
                 w = find_window_by_process_name(process_hint)
                 if w:
-                    title = getattr(w, "title", "").lower()
-                    # Verify the window title matches what we're looking for
-                    if self.window_title.lower() in title or title in self.window_title.lower():
+                    title = (getattr(w, "title", "") or "").strip().lower()
+                    wm_class = (getattr(w, "wm_class", "") or "").strip().lower()
+                    target = self.window_title.lower().strip()
+                    # Avoid accepting empty titles ("", None), which can match everything.
+                    if title and (target in title or title in target):
+                        logger.debug(f"[Steam] Found by process name '{process_hint}': title={getattr(w, 'title', None)}")
+                        return w
+                    if wm_class and (target in wm_class or wm_class in target):
                         logger.debug(f"[Steam] Found by process name '{process_hint}': title={getattr(w, 'title', None)}")
                         return w
             except Exception as e:

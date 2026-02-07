@@ -402,9 +402,14 @@ def find_window_by_process_name(process_name: str):
     matching_pids = []
     for proc in psutil.process_iter(['pid', 'name']):
         try:
-            if process_name.lower() in proc.info['name'].lower():
-                matching_pids.append(proc.info['pid'])
+            proc_info = getattr(proc, "info", {}) or {}
+            pid = proc_info.get("pid")
+            name = (proc_info.get("name") or "").strip().lower()
+            if pid is not None and name and process_name.lower() in name:
+                matching_pids.append(pid)
         except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        except Exception:
             continue
     
     if not matching_pids:
