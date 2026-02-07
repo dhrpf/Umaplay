@@ -1,21 +1,60 @@
 # Quick Start: Testing Wine Support on Linux
 
+## Prerequisites
+
+- Linux distribution (Ubuntu, Fedora, Arch, etc.)
+- Miniconda or Anaconda
+- Git
+
 ## ✅ Already Verified
 
 The Wine support implementation has been tested on Linux and all tests pass:
 - Wine detection works
 - Hotkey manager uses pynput correctly
 - All modules import without errors
-- Virtual environment setup works
+- Conda environment setup works
 
 ## 🚀 Quick Test (No Wine Required)
 
+### 1. Install Miniconda (if not already installed)
+
 ```bash
-# Run the automated test
+# Download and install Miniconda
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
+
+# Initialize conda for your shell
+~/miniconda3/bin/conda init bash
+# Then restart your terminal or run:
+source ~/.bashrc
+```
+
+### 2. Set up Conda environment
+
+```bash
+# Navigate to Umaplay directory
+cd /path/to/Umaplay
+
+# Create conda environment
+conda create -n env_uma python=3.10
+
+# Activate environment
+conda activate env_uma
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 3. Run automated test
+
+```bash
+# Run the test script
 ./test_linux_venv.sh
 ```
 
-This creates a virtual environment and verifies all Wine support code works on Linux.
+This verifies all Wine support code works on Linux.
 
 ## 🍷 Full Wine Test (With Umamusume)
 
@@ -50,7 +89,7 @@ wine python-3.10.11-amd64.exe
 ### 4. Install Umaplay dependencies in Wine
 
 ```bash
-cd /mnt/cache/git/Umaplay
+cd /path/to/Umaplay
 wine python -m pip install -r requirements.txt
 ```
 
