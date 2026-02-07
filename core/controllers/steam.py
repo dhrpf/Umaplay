@@ -2,6 +2,12 @@
 import time
 from typing import Any, Optional, Tuple, Union
 
+# Import wine_helper FIRST to patch pygetwindow before it's imported
+try:
+    from core.utils import wine_helper
+except ImportError:
+    pass
+
 from core.controllers.base import pyautogui
 from core.controllers.window_utils import (
     get_all_windows,
@@ -9,7 +15,7 @@ from core.controllers.window_utils import (
     find_window_by_process_name
 )
 
-# Optional pywin32 on Windows
+# Optional pywin32 on Windows; preferred when available (Wine uses pywin32-ctypes)
 try:
     import win32con  # type: ignore
     import win32gui  # type: ignore

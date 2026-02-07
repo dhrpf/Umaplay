@@ -25,6 +25,7 @@ from core.agent_scenario import AgentScenario
 from core.utils.logger import logger_uma, setup_uma_logging
 from core.settings import Settings
 from core.agent_nav import AgentNav
+from core.utils.hotkey_manager import get_hotkey_manager
 
 from server.main import app
 from server.utils import (
@@ -755,46 +756,46 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
         else:
             nav_state.start(action="roulette")
 
-    # Try to register hooks (only works on Windows with keyboard library)
-    # On Linux with pynput, we rely on polling only
-    if keyboard_handler.HAS_KEYBOARD and kb is not None:
-        for k in keys_bot:
-            try:
-                logger_uma.debug(f"[HOTKEY] Registering hook for {k}…")
-                kb.add_hotkey(
-                    k,
-                    lambda key=k: event_q.put(("toggle", f"hook:{key}")),
-                    suppress=False,
-                    trigger_on_release=True,
-                )
+    # Try to register hooks
+    hotkey_mgr = get_hotkey_manager()
+    
+    for k in keys_bot:
+        try:
+            logger_uma.debug(f"[HOTKEY] Registering hook for {k}…")
+            success = hotkey_mgr.add_hotkey(
+                k,
+                lambda key=k: event_q.put(("toggle", f"hook:{key}")),
+                suppress=False,
+                trigger_on_release=True,
+            )
+            if success:
                 hooked_keys.add(k)
                 logger_uma.info(f"[HOTKEY] Hook active for '{k}'.")
-            except PermissionError as e:
-                logger_uma.warning(
-                    f"[HOTKEY] PermissionError registering '{k}'. On Windows you may need to run as Administrator. {e}"
-                )
-            except Exception as e:
-                logger_uma.warning(f"[HOTKEY] Could not register '{k}': {e}")
+        except PermissionError as e:
+            logger_uma.warning(
+                f"[HOTKEY] PermissionError registering '{k}'. On Windows you may need to run as Administrator. {e}"
+            )
+        except Exception as e:
+            logger_uma.warning(f"[HOTKEY] Could not register '{k}': {e}")
 
-        for k, fn_name in [("F7", "team"), ("F8", "daily"), ("F9", "roulette")]:
-            try:
-                logger_uma.debug(f"[HOTKEY] Registering hook for {k}…")
-                kb.add_hotkey(
-                    k,
-                    lambda key=k, name=fn_name: event_q.put((name, f"hook:{key}")),
-                    suppress=False,
-                    trigger_on_release=True,
-                )
+    for k, fn_name in [("F7", "team"), ("F8", "daily"), ("F9", "roulette")]:
+        try:
+            logger_uma.debug(f"[HOTKEY] Registering hook for {k}…")
+            success = hotkey_mgr.add_hotkey(
+                k,
+                lambda key=k, name=fn_name: event_q.put((name, f"hook:{key}")),
+                suppress=False,
+                trigger_on_release=True,
+            )
+            if success:
                 hooked_keys.add(k)
                 logger_uma.info(f"[HOTKEY] Hook active for '{k}'.")
-            except PermissionError as e:
-                logger_uma.warning(
-                    f"[HOTKEY] PermissionError registering '{k}'. On Windows you may need to run as Administrator. {e}"
-                )
-            except Exception as e:
-                logger_uma.warning(f"[HOTKEY] Could not register '{k}': {e}")
-    else:
-        logger_uma.info("[HOTKEY] Using pynput (Linux/macOS) - hotkey registration not available, polling only.")
+        except PermissionError as e:
+            logger_uma.warning(
+                f"[HOTKEY] PermissionError registering '{k}'. On Windows you may need to run as Administrator. {e}"
+            )
+        except Exception as e:
+            logger_uma.warning(f"[HOTKEY] Could not register '{k}': {e}")
 
     # Polling fallback (works even when hooks fail, and is the primary method on Linux)
     # With increased debounce (0.8s), both hook and poll can coexist safely
@@ -823,7 +824,7 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
             fired = False
             for k in keys_bot:
                 try:
-                    if keyboard_handler.is_pressed(k):
+                    if hotkey_mgr.is_pressed(k):
                         logger_uma.debug(f"[HOTKEY] Poll detected '{k}'.")
                         _debounced_toggle(f"poll:{k}")
                         fired = True
@@ -833,7 +834,7 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
             # Nav keys
             for k, fn in [("F7", _debounced_team), ("F8", _debounced_daily), ("F9", _debounced_roulette)]:
                 try:
-                    if keyboard_handler.is_pressed(k):
+                    if hotkey_mgr.is_pressed(k):
                         logger_uma.debug(f"[HOTKEY] Poll detected '{k}'.")
                         fn(f"poll:{k}")
                         fired = True
@@ -846,8 +847,8 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
         pass
     finally:
         try:
-            keyboard_handler.cleanup()
-            logger_uma.debug("[HOTKEY] Cleaned up keyboard handler.")
+            hotkey_mgr.stop()
+            logger_uma.debug("[HOTKEY] Stopped hotkey manager.")
         except Exception:
             pass
 

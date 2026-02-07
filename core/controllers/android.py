@@ -5,6 +5,12 @@ import random
 import time
 from typing import Optional, Tuple, Union
 
+# Import wine_helper FIRST to patch pygetwindow before it's imported
+try:
+    from core.utils import wine_helper
+except ImportError:
+    pass
+
 from core.controllers.base import pyautogui, HAS_PYAUTOGUI
 # pygetwindow may not be available on Linux; use our window_utils for cross-platform behavior
 from core.controllers.window_utils import (
@@ -15,7 +21,7 @@ from core.controllers.window_utils import (
 )
 from PIL import ImageGrab, Image
 
-# Optional pywin32 on Windows; we prefer to use pygetwindow calls when running on Linux
+# Optional pywin32 on Windows; preferred when available (Wine uses pywin32-ctypes)
 try:
     import win32con  # type: ignore
     import win32gui  # type: ignore
