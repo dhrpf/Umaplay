@@ -356,6 +356,13 @@ class CareerLoopAgent:
                 logger_uma.error("[CareerLoopAgent] Could not find TP icon or white buttons")
                 return False
             
+            # Click plus button
+            self.waiter.click_when(
+                classes=["button_plus"],
+                tag="restore_energy_plus",
+                timeout_s=5.0,
+            )
+
             # Step 3: Click "OK" button (green button)
             logger_uma.debug("[CareerLoopAgent] Step 3: Clicking OK button")
             clicked_ok = self.waiter.click_when(

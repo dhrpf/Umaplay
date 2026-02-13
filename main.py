@@ -850,18 +850,21 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
 
 
     # Try to register hooks
+    hotkey_mgr = get_hotkey_manager()
+    
     # F1 for Career Loop Mode
     for k in keys_career_loop:
         try:
             logger_uma.debug(f"[HOTKEY] Registering hook for {k}…")
-            keyboard.add_hotkey(
+            success = hotkey_mgr.add_hotkey(
                 k,
                 lambda key=k: event_q.put(("career_loop", f"hook:{key}")),
                 suppress=False,
                 trigger_on_release=True,
             )
-            hooked_keys.add(k)
-            logger_uma.info(f"[HOTKEY] Hook active for '{k}' (Career Loop Mode).")
+            if success:
+                hooked_keys.add(k)
+                logger_uma.info(f"[HOTKEY] Hook active for '{k}' (Career Loop Mode).")
         except PermissionError as e:
             logger_uma.warning(
                 f"[HOTKEY] PermissionError registering '{k}'. On Windows you may need to run as Administrator. {e}"
@@ -870,7 +873,6 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
             logger_uma.warning(f"[HOTKEY] Could not register '{k}': {e}")
 
     # Try to register hooks
-    hotkey_mgr = get_hotkey_manager()
     
     for k in keys_bot:
         try:
@@ -941,7 +943,7 @@ def hotkey_loop(bot_state: BotState, nav_state: NavState):
             # F1 for Career Loop Mode
             for k in keys_career_loop:
                 try:
-                    if keyboard.is_pressed(k):
+                    if hotkey_mgr.is_pressed(k):
                         logger_uma.debug(f"[HOTKEY] Poll detected '{k}'.")
                         _debounced_career_loop(f"poll:{k}")
                         fired = True

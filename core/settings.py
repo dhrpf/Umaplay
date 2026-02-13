@@ -81,7 +81,7 @@ class Settings:
     # Career automation loop settings for unattended career farming
     CAREER_LOOP_ENABLED: bool = _env_bool("CAREER_LOOP_ENABLED", default=True)
     CAREER_LOOP_MAX_CAREERS: Optional[int] = _env_int("CAREER_LOOP_MAX_CAREERS", default=5) or None  # None = infinite
-    CAREER_LOOP_PREFERRED_SUPPORT: str = _env("CAREER_LOOP_PREFERRED_SUPPORT", default="Biko Pegasus") or "Biko Pegasus"
+    CAREER_LOOP_PREFERRED_SUPPORT: str = _env("CAREER_LOOP_PREFERRED_SUPPORT", default="Riko Kashimoto") or "Riko Kashimoto"
     CAREER_LOOP_PREFERRED_LEVEL: int = _env_int("CAREER_LOOP_PREFERRED_LEVEL", default=50)
     CAREER_LOOP_MAX_REFRESH: int = _env_int("CAREER_LOOP_MAX_REFRESH", default=5)
     CAREER_LOOP_REFRESH_WAIT: float = _env_float("CAREER_LOOP_REFRESH_WAIT", default=5.0)

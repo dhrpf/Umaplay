@@ -88,6 +88,10 @@ def classify_screen_ura(
     has_pal = _any_conf(dets, names_map["pal"], lobby_conf)
     has_button_change = _any_conf(dets, names_map["button_change"], lobby_conf)
     has_race_badge = _any_conf(dets, names_map["race_badge"], lobby_conf)
+    has_career_complete = _any_conf(dets, "career_complete", 0.50)
+
+    if has_career_complete:
+        return "CareerComplete", {"has_career_complete": has_career_complete}
 
     # 1) Event
     if n_event_choices >= 2:
@@ -273,6 +277,12 @@ def classify_screen_unity_cup(
     race_after_next = _any_conf(dets, names_map["race_after_next"], 0.5)
     has_button_claw_action = _any_conf(dets, names_map["button_claw_action"], lobby_conf)
     has_claw = _any_conf(dets, names_map["claw"], lobby_conf)
+
+    has_career_complete = _any_conf(dets, "career_complete", 0.60)
+    
+    # 0) Career Complete (highest priority - end of career)
+    if has_career_complete:
+        return "CareerComplete", {"has_career_complete": has_career_complete}
     
     
     # 1) Event

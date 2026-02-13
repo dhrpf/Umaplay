@@ -731,6 +731,41 @@ class AgentUnityCup(AgentScenario):
                 except Exception as exc:
                     logger_uma.error("[skill_memory] reset failed: %s", exc)
                 continue
+            if screen == "FinalScreen" or screen == "CareerComplete":
+                self.claw_turn = 0
+                # Only if skill list defined
+                if len(self.skill_list) > 0 and self.lobby._go_skills():
+                    sleep(1.0)
+                    final_result = self.skills_flow.buy(self.skill_list)
+                    self._last_skill_buy_succeeded = (
+                        final_result.status is SkillsBuyStatus.SUCCESS
+                    )
+                    logger_uma.info(
+                        "[agent] Final screen skills result: %s (exit_recovered=%s)",
+                        final_result.status.value,
+                        final_result.exit_recovered,
+                    )
+
+                self.is_running = False  # end of career
+                logger_uma.info("Detected end of career")
+                
+                # End Support Bar Tracker run
+                tracker_state = self.support_bar_tracker.get_state()
+                logger_uma.info(
+                    "[agent] Support Bar Tracker final state: avg_progress=%.1f%%, cards_tracked=%d",
+                    tracker_state.get("average_progress", 0.0),
+                    len(tracker_state.get("cards", {}))
+                )
+                self.support_bar_tracker.end_run()
+                logger_uma.info("[agent] Support Bar Tracker ended")
+                
+                try:
+                    self.skill_memory.reset(persist=True)
+                    logger_uma.info("[skill_memory] Reset after career completion")
+                except Exception as exc:
+                    logger_uma.error("[skill_memory] reset failed: %s", exc)
+                continue
+
 
             if screen == "ClawMachine":
                 self.claw_turn += 1

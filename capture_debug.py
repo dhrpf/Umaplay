@@ -11,6 +11,7 @@ from core.controllers.bluestacks import BlueStacksController
 from core.controllers.android import ScrcpyController
 from core.controllers.adb import ADBController
 from core.perception.yolo.yolo_local import LocalYOLOEngine
+from core.perception.ocr.ocr_local import LocalOCREngine
 from core.settings import Settings
 from core.types import DetectionDict
 
@@ -35,16 +36,23 @@ def _build_controller(mode: str, window_title: str | None):
     return ScrcpyController(window_title=title, capture_client_only=True)
 
 
-def _draw_overlay(img: Image.Image, dets: list[DetectionDict]) -> Image.Image:
+def _draw_overlay(img: Image.Image, dets: list[DetectionDict], ocr_results: dict[int, str] = None) -> Image.Image:
     ov = img.copy()
     draw = ImageDraw.Draw(ov)
-    for d in dets:
+    for i, d in enumerate(dets):
         x1, y1, x2, y2 = [int(v) for v in d.get("xyxy", (0, 0, 0, 0))]
         name = str(d.get("name", "?"))
         conf = float(d.get("conf", 0.0))
 
         draw.rectangle([x1, y1, x2, y2], outline=(0, 200, 255), width=2)
         label = f"{name} {conf:.2f}"
+        
+        # Add OCR text if available
+        if ocr_results and i in ocr_results:
+            ocr_text = ocr_results[i]
+            if ocr_text:
+                label += f" | OCR: {ocr_text}"
+        
         # text background box
         try:
             tb = draw.textbbox((0, 0), label)
@@ -113,6 +121,23 @@ def main():
     parser.add_argument(
         "--tag", type=str, default="capture_nav_debug", help="Tag for debug"
     )
+    parser.add_argument(
+        "--remote",
+        type=bool,
+        default=False,
+        help="Use remote YOLO engine (requires --remote-url)",
+    )
+    parser.add_argument(
+        "--remote-url",
+        type=str,
+        default="http://localhost:8001",
+        help="URL for remote YOLO engine (requires --remote)",
+    )
+    parser.add_argument(
+        "--ocr",
+        action="store_true",
+        help="Run OCR on detected boxes",
+    )
     args = parser.parse_args()
 
     ctrl = _build_controller(args.mode, args.window_title)
@@ -133,7 +158,14 @@ def main():
         else (0.10 if args.yolo_config == "nav" else float(Settings.YOLO_CONF))
     )
 
-    engine = LocalYOLOEngine(ctrl=ctrl, weights=weights_path)
+    if args.remote and args.remote_url:
+        from core.perception.yolo.yolo_remote import RemoteYOLOEngine
+
+        engine = RemoteYOLOEngine(
+            ctrl=ctrl, base_url=args.remote_url, weights=weights_path
+        )
+    else :
+        engine = LocalYOLOEngine(ctrl=ctrl, weights=weights_path)
 
     # Recognize (engine will decide special-cases like Steam left-half)
     img, meta, dets = engine.recognize(
@@ -146,20 +178,46 @@ def main():
     print(f"YOLO config: {args.yolo_config} | Weights: {weights_path}")
     print(f"imgsz={meta.get('imgsz')} conf={meta.get('conf')} iou={meta.get('iou')}")
     print(f"Detections: {len(dets)}")
+    
+    # Run OCR on detected boxes if requested
+    ocr_results = {}
+    if args.ocr and dets:
+        print("\n=== Running OCR on detected boxes ===")
+        if args.remote_url:
+            from core.perception.ocr.ocr_remote import RemoteOCREngine
+            ocr_engine = RemoteOCREngine(base_url=args.remote_url)
+        else:
+            ocr_engine = LocalOCREngine()
+        
+        for i, d in enumerate(dets):
+            x1, y1, x2, y2 = [int(v) for v in d.get("xyxy", (0, 0, 0, 0))]
+            # Crop the box from the image
+            box_img = img.crop((x1, y1, x2, y2))
+            try:
+                ocr_text = ocr_engine.text(box_img, min_conf=0.3)
+                ocr_results[i] = ocr_text.strip()
+                if ocr_text.strip():
+                    print(f"[{i:02d}] OCR: '{ocr_text.strip()}'")
+            except Exception as e:
+                print(f"[{i:02d}] OCR failed: {e}")
+                ocr_results[i] = ""
+    
+    print("\n=== Detection Details ===")
     for i, d in enumerate(dets):
         name = d.get("name", "?")
         conf = float(d.get("conf", 0.0))
         x1, y1, x2, y2 = d.get("xyxy", (0, 0, 0, 0))
+        ocr_info = f" | OCR: '{ocr_results[i]}'" if i in ocr_results and ocr_results[i] else ""
         print(
-            f"[{i:02d}] {name:<20} conf={conf:0.3f}  xyxy=({x1:0.1f},{y1:0.1f},{x2:0.1f},{y2:0.1f})"
+            f"[{i:02d}] {name:<20} conf={conf:0.3f}  xyxy=({x1:0.1f},{y1:0.1f},{x2:0.1f},{y2:0.1f}){ocr_info}"
         )
 
     # Draw overlay and save
-    ov = _draw_overlay(img, dets)
+    ov = _draw_overlay(img, dets, ocr_results)
     out_path = Path(args.save or "./debug_nav_overlay.png").resolve()
     ov.save(out_path)
-    print(f"Saved overlay -> {out_path}")
-
+    print(f"\nSaved overlay -> {out_path}")
+    img.save("save.png")
 
 if __name__ == "__main__":
     # python capture_nav_debug.py  --mode scrcpy --window-title "23117RA68G" --conf 0.10
