@@ -77,6 +77,16 @@ class Settings:
     # Race if no good training options are available (default: False = skip race if no good training)
     RACE_IF_NO_GOOD_VALUE: bool = _env_bool("RACE_IF_NO_GOOD_VALUE", default=False)
 
+    # --------- Career Loop Configuration ---------
+    # Career automation loop settings for unattended career farming
+    CAREER_LOOP_ENABLED: bool = _env_bool("CAREER_LOOP_ENABLED", default=True)
+    CAREER_LOOP_MAX_CAREERS: Optional[int] = _env_int("CAREER_LOOP_MAX_CAREERS", default=5) or None  # None = infinite
+    CAREER_LOOP_PREFERRED_SUPPORT: str = _env("CAREER_LOOP_PREFERRED_SUPPORT", default="Biko Pegasus") or "Biko Pegasus"
+    CAREER_LOOP_PREFERRED_LEVEL: int = _env_int("CAREER_LOOP_PREFERRED_LEVEL", default=50)
+    CAREER_LOOP_MAX_REFRESH: int = _env_int("CAREER_LOOP_MAX_REFRESH", default=5)
+    CAREER_LOOP_REFRESH_WAIT: float = _env_float("CAREER_LOOP_REFRESH_WAIT", default=5.0)
+    CAREER_LOOP_ERROR_THRESHOLD: int = _env_int("CAREER_LOOP_ERROR_THRESHOLD", default=5)
+
     # --------- Project roots & paths ---------
     CORE_DIR: Path = Path(__file__).resolve().parent
     ROOT_DIR: Path = CORE_DIR.parent
@@ -101,6 +111,11 @@ class Settings:
     YOLO_WEIGHTS_NAV: Path = Path(
         _env("YOLO_WEIGHTS_NAV") or (MODELS_DIR / "uma_nav.pt")
     )
+
+    YOLO_WEIGHTS_CAREER_LOOP: Path = Path(
+        _env("YOLO_WEIGHTS_CAREER_LOOP") or (MODELS_DIR / "uma_career_loop.pt")
+    )
+
     IS_BUTTON_ACTIVE_CLF_PATH: Path = Path(
         _env("IS_BUTTON_ACTIVE_CLF_PATH") or (MODELS_DIR / "active_button_clf.joblib")
     )
@@ -144,7 +159,7 @@ class Settings:
 
     # --------- Detection (YOLO) ---------
     YOLO_IMGSZ: int = _env_int("YOLO_IMGSZ", default=832)
-    YOLO_CONF: float = _env_float("YOLO_CONF", default=0.60)  # should be 0.7 in general, but we are a little conservative here...
+    YOLO_CONF: float = _env_float("YOLO_CONF", default=0.50)  # should be 0.7 in general, but we are a little conservative here...
     YOLO_IOU: float = _env_float("YOLO_IOU", default=0.45)
     UNITY_CUP_GOLDEN_CONF: float = _env_float("UNITY_CUP_GOLDEN_CONF", default=0.61)
     UNITY_CUP_GOLDEN_RELAXED_CONF: float = _env_float(

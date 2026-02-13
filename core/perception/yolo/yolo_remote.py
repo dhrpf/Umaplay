@@ -15,6 +15,134 @@ from core.settings import Settings
 from core.types import DetectionDict
 from core.utils.img import pil_to_bgr, to_bgr
 from core.utils.logger import logger_uma
+import time
+
+# Global counter for button collection (button_type_state -> count)
+# Key format: "button_white_on", "button_white_off", etc.
+_button_collection_counts: Dict[str, int] = {}
+
+# Button classes to collect
+_button_classes = ["button_white", "button_green", "button_golden", "button_pink"]
+
+
+def _get_button_count(button_type: str, state: str) -> int:
+    """Get current button collection count for a button type and state."""
+    global _button_collection_counts
+    key = f"{button_type}_{state}"
+    return _button_collection_counts.get(key, 0)
+
+
+def _increment_button_count(button_type: str, state: str) -> int:
+    """Increment and return button collection count for a button type and state."""
+    global _button_collection_counts
+    key = f"{button_type}_{state}"
+    _button_collection_counts[key] = _button_collection_counts.get(key, 0) + 1
+    return _button_collection_counts[key]
+
+
+def _collect_button_data(
+    pil_img: Image.Image,
+    dets: List[DetectionDict],
+    classifier: Optional["ActiveButtonClassifier"] = None,
+) -> None:
+    """
+    Automatically collect button training data based on button classifier prediction.
+    
+    For each button detection:
+    - Crop button region
+    - Run through button classifier
+    - If classifier_conf >= threshold: save to datasets/button_states/{button_type}/on/
+    - If classifier_conf < threshold: save to datasets/button_states/{button_type}/off/
+    
+    Filters out buttons with width < 125 pixels to avoid collecting small/partial detections.
+    Limits collection based on Settings.BUTTON_COLLECTION_LIMIT per button type.
+    Can be disabled by setting Settings.COLLECT_BUTTON_DATA = False.
+    """
+    import os
+    import time
+    from core.utils.geometry import crop_pil
+    
+    # Check if button collection is enabled
+    if not Settings.COLLECT_BUTTON_DATA:
+        return
+    
+    if not dets:
+        return
+    
+    # Load classifier if not provided
+    if classifier is None:
+        try:
+            from core.perception.is_button_active import ActiveButtonClassifier
+            classifier = ActiveButtonClassifier.load("models/active_button_clf.joblib")
+        except Exception as e:
+            logger_uma.debug(f"[BUTTON COLLECT] Classifier not available, skipping collection: {e}")
+            return
+    
+    try:
+        base_dir = "datasets/button_states"
+        ts = time.strftime("%Y%m%d-%H%M%S") + f"_{int((time.time() % 1) * 1000):03d}"
+        
+        for det in dets:
+            button_name = det.get("name", "")
+            
+            # Only collect specified button classes
+            if button_name not in _button_classes:
+                continue
+            
+            yolo_conf = float(det.get("conf", 0.0))
+            xyxy = det.get("xyxy")
+            
+            if not xyxy:
+                continue
+            
+            # Calculate button width and skip if too small
+            x1, y1, x2, y2 = xyxy
+            button_width = x2 - x1
+            if button_width < 125:
+                continue
+            
+            # Crop button region from image
+            button_img = crop_pil(pil_img, (int(x1), int(y1), int(x2), int(y2)))
+            
+            # Run through classifier to get actual button state confidence
+            try:
+                start_time = time.perf_counter()
+                classifier_conf = classifier.predict_proba(button_img)
+                end_time = time.perf_counter()
+                print(f"classifier took : {end_time - start_time}")
+            except Exception as e:
+                logger_uma.debug(f"[BUTTON COLLECT] Classifier prediction failed: {e}")
+                continue
+            
+            # Determine on/off based on classifier confidence threshold
+            state = "on" if classifier_conf >= Settings.BUTTON_COLLECTION_THRESHOLD else "off"
+            
+            # Check if we've collected enough for this button type and state
+            current_count = _get_button_count(button_name, state)
+            if current_count >= Settings.BUTTON_COLLECTION_LIMIT:
+                continue
+            
+            # Create output directory
+            out_dir = os.path.join(base_dir, button_name, state)
+            os.makedirs(out_dir, exist_ok=True)
+            
+            # Save with timestamp and classifier confidence
+            filename = f"{button_name}_{state}_{ts}_{classifier_conf:.2f}.png"
+            filepath = os.path.join(out_dir, filename)
+            
+            # Save image
+            button_img.save(filepath)
+            
+            # Increment counter
+            new_count = _increment_button_count(button_name, state)
+            
+            logger_uma.debug(
+                f"[BUTTON COLLECT] {button_name} {state.upper()} ({new_count}/{Settings.BUTTON_COLLECTION_LIMIT}) "
+                f"clf_conf={classifier_conf:.2f} yolo_conf={yolo_conf:.2f} w={button_width:.0f}px -> {filename}"
+            )
+            
+    except Exception as e:
+        logger_uma.debug(f"failed collecting button data: {e}")
 
 
 def _encode_image_to_base64(img: Any, *, fmt: str = ".png") -> str:
@@ -65,10 +193,19 @@ class RemoteYOLOEngine(IDetector):
         # Ensure JSON-serializable type (avoid WindowsPath issues)
         self.weights = str(weights) if weights is not None else None
 
-    def _post(self, payload: Dict[str, any]) -> Dict[str, any]:
-        r = self.session.post(
-            f"{self.base_url}/yolo", json=payload, timeout=self.timeout
-        )
+    def _post(self, data: Dict[str, Any] = None, files: Dict = None, json_payload: Dict = None) -> Dict[str, Any]:
+        """
+        Refactored to support both JSON (legacy) and Multipart (optimized)
+        """
+        url = f"{self.base_url}/yolo"
+        
+        if files:
+            # Multipart upload
+            r = self.session.post(url, data=data, files=files, timeout=self.timeout)
+        else:
+            # Legacy JSON behavior
+            r = self.session.post(url, json=json_payload, timeout=self.timeout)
+
         r.raise_for_status()
         return r.json()
 
@@ -87,18 +224,30 @@ class RemoteYOLOEngine(IDetector):
         conf = conf if conf is not None else Settings.YOLO_CONF
         iou = iou if iou is not None else Settings.YOLO_IOU
 
-        img64 = _encode_image_to_base64(bgr)
-        data = self._post(
-            {
-                "img": img64,
-                "imgsz": imgsz,
-                "conf": conf,
-                "iou": iou,
-                "weights_path": self.weights,
-                "tag": tag,
-                "agent": agent,
-            }
-        )
+        success, encoded_img = cv2.imencode(".jpg", bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+        img_bytes = encoded_img.tobytes()
+
+        # 4. Prepare Metadata (Must be strings for multipart/form-data)
+        metadata = {
+            "imgsz": str(imgsz),
+            "conf": str(conf),
+            "iou": str(iou),
+            "weights_path": self.weights,
+            "tag": tag,
+            "agent": agent or "",
+        }
+
+        # start_time = time.perf_counter()
+        
+        # 5. Send as Multipart
+        data = self._post(data=metadata, files={"file": ("image.jpg", img_bytes, "image/jpeg")})
+        
+        # end_time = time.perf_counter()
+        
+        # logger_uma.debug(
+        #     "remote yolo (optimized): (%.3f s)",
+        #     end_time - start_time,
+        # )
         meta = data.get(
             "meta", {"backend": "remote", "imgsz": imgsz, "conf": conf, "iou": iou}
         )
@@ -120,7 +269,7 @@ class RemoteYOLOEngine(IDetector):
         agent: Optional[str] = None,
     ) -> Tuple[Dict[str, Any], List[DetectionDict]]:
         bgr = pil_to_bgr(pil_img)
-        return self.detect_bgr(
+        meta, dets = self.detect_bgr(
             bgr,
             imgsz=imgsz,
             conf=conf,
@@ -128,6 +277,11 @@ class RemoteYOLOEngine(IDetector):
             tag=tag,
             agent=agent,
         )
+        
+        # Collect button training data on client side
+        # _collect_button_data(pil_img, dets)
+        
+        return meta, dets
 
     @staticmethod
     def _maybe_store_debug(

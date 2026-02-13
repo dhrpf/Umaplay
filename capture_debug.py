@@ -30,7 +30,7 @@ def _build_controller(mode: str, window_title: str | None):
         return BlueStacksController(window_title=title, capture_client_only=True)
     if mode == "adb":
         device = Settings.ADB_DEVICE
-        return ADBController(device=device)
+        return ADBController(device="192.168.0.163:5555")
     # scrcpy
     return ScrcpyController(window_title=title, capture_client_only=True)
 
@@ -68,7 +68,7 @@ def main():
     )
     parser.add_argument(
         "--mode",
-        choices=["steam", "bluestack", "scrcpy"],
+        choices=["steam", "bluestack", "scrcpy", "adb"],
         default=Settings.MODE,
         help="Capture mode / target window type",
     )
