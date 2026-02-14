@@ -749,16 +749,6 @@ class AgentUnityCup(AgentScenario):
                 self.is_running = False  # end of career
                 logger_uma.info("Detected end of career")
                 
-                # End Support Bar Tracker run
-                tracker_state = self.support_bar_tracker.get_state()
-                logger_uma.info(
-                    "[agent] Support Bar Tracker final state: avg_progress=%.1f%%, cards_tracked=%d",
-                    tracker_state.get("average_progress", 0.0),
-                    len(tracker_state.get("cards", {}))
-                )
-                self.support_bar_tracker.end_run()
-                logger_uma.info("[agent] Support Bar Tracker ended")
-                
                 try:
                     self.skill_memory.reset(persist=True)
                     logger_uma.info("[skill_memory] Reset after career completion")
