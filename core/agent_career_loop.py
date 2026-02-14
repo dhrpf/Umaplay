@@ -939,7 +939,15 @@ class AgentCareerLoop:
                 career_step_det.get("conf", 0.0),
             )
             
-            # Check if text contains "career"
+            # Check if text contains "complete" - this means career is finished
+            if "complete" in text:
+                logger_uma.debug(
+                    "[CareerLoopAgent] career_step text '%s' contains 'complete' - career is finished, not in active career",
+                    text,
+                )
+                return False
+            
+            # Check if text contains "career" or "training"
             if "career" in text or "training" in text:
                 logger_uma.info(f"[CareerLoopAgent] Detected career_step with {text} text - already in career!")
                 self.state.is_running = True
