@@ -934,7 +934,7 @@ class CareerLoopAgent:
             )
             
             # Check if text contains "career"
-            if "career" in text or "training" in text:
+            if ("career" in text or "training" in text) and "complete" not in text:
                 logger_uma.info(f"[CareerLoopAgent] Detected career_step with {text} text - already in career!")
                 self.state.is_running = True
                 self.agent_scenario.run()
