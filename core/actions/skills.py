@@ -12,6 +12,10 @@ from PIL import Image
 from core.controllers.android import ScrcpyController
 from core.controllers.adb import ADBController
 try:
+    from core.controllers.scrcpy_adb import ScrcpyADBController
+except Exception:
+    ScrcpyADBController = None  # type: ignore
+try:
     from core.controllers.bluestacks import BlueStacksController
 except Exception:
     BlueStacksController = None  # type: ignore
@@ -709,7 +713,7 @@ class SkillsFlow:
             )
             # Inertia wait
             time.sleep(0.15)
-        elif isinstance(self.ctrl, ADBController):
+        elif isinstance(self.ctrl, ADBController) or (ScrcpyADBController is not None and isinstance(self.ctrl, ScrcpyADBController)):
             # Reuse smart_scroll_small for ADB so we get anchor-aware drags
             anchor_xy = None
             xywh = self.ctrl._client_bbox_screen_xywh()

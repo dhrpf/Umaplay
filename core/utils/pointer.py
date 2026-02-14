@@ -7,6 +7,10 @@ from typing import Optional, Tuple
 from core.controllers.adb import ADBController
 from core.controllers.android import ScrcpyController  # type check only
 try:
+    from core.controllers.scrcpy_adb import ScrcpyADBController
+except Exception:
+    ScrcpyADBController = None  # type: ignore
+try:
     from core.controllers.bluestacks import BlueStacksController
 except Exception:
     BlueStacksController = None  # type: ignore
@@ -59,7 +63,7 @@ def smart_scroll_small(
     )
 
     # For mouse-based controllers we can move the cursor; ADB move_to is a no-op.
-    if target_anchor is not None and not isinstance(ctrl, ADBController):
+    if target_anchor is not None and not isinstance(ctrl, (ADBController, type(None) if ScrcpyADBController is None else ScrcpyADBController)):
         ctrl.move_to(*target_anchor)
         time.sleep(settle_mid_s)
 
@@ -84,7 +88,7 @@ def smart_scroll_small(
             duration_range=(0.20, 0.40),
             end_hold_range=end_hold_range_android or (0.10, 0.20),
         )
-    elif isinstance(ctrl, ADBController):
+    elif isinstance(ctrl, ADBController) or (ScrcpyADBController is not None and isinstance(ctrl, ScrcpyADBController)):
         if not xywh and target_anchor is None:
             logger_uma.debug(
                 "[pointer] ADB scroll: no bbox/anchor, falling back to default center scroll"
