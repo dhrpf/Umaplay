@@ -156,6 +156,7 @@ class Settings:
     MODE: str = _env("MODE", "steam") or "steam"
     USE_ADB: bool = _env_bool("USE_ADB", False)
     ADB_DEVICE: Optional[str] = _env("ADB_DEVICE", "localhost:5555")
+    SCRCPY_ADB_MODE: bool = _env_bool("SCRCPY_ADB_MODE", False)
 
     # --------- Detection (YOLO) ---------
     YOLO_IMGSZ: int = _env_int("YOLO_IMGSZ", default=832)

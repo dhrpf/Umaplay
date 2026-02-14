@@ -78,7 +78,13 @@ def make_controller_from_settings() -> IController:
     elif mode == "adb":
         device = getattr(Settings, "ADB_DEVICE", None)
         logger_uma.info(f"[CTRL] Mode=adb, device='{device}'")
-        return ADBController(device=device)
+
+        if Settings.SCRCPY_ADB_MODE:
+            logger_uma.info(f"[CTRL] Mode=adb (scrcpy-adb mode), device='{device}'")
+            from core.controllers.scrcpy_adb import ScrcpyADBController
+            return ScrcpyADBController(device=device)
+        else:
+            return ADBController(device=device)
     elif mode == "bluestack":
         use_adb = getattr(Settings, "USE_ADB", False)
         if use_adb:
