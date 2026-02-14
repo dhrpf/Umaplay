@@ -251,7 +251,7 @@ class BotState:
         self.running: bool = False
         self._lock = threading.Lock()
 
-    def start(self, career_loop_mode: False):
+    def start(self, career_loop_mode: bool = False):
         """
         Reload config.json -> Settings.apply_config -> build fresh controller + OCR/YOLO -> run Player.
         This guarantees we always reflect the latest UI changes at start time.
