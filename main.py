@@ -501,7 +501,7 @@ class NavState:
                 return
 
             # OCR from settings, YOLO engine for NAV specifically
-            ocr, yolo_engine_nav = make_ocr_yolo_from_settings(
+            ocr, yolo_engine_nav, _ = make_ocr_yolo_from_settings(
                 ctrl, weights=Settings.YOLO_WEIGHTS_NAV
             )
 
