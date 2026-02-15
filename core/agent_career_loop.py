@@ -484,6 +484,48 @@ class AgentCareerLoop:
             )
             return False
 
+    def _reset_agent_state(self) -> None:
+        """
+        Reset agent state for a new career.
+        
+        This clears date memory and other state that should not persist
+        between careers, ensuring each career starts fresh.
+        """
+        try:
+            logger_uma.debug("[CareerLoopAgent] Resetting agent state")
+            
+            # Reset date tracking in lobby
+            if hasattr(self.agent_scenario, 'lobby'):
+                lobby = self.agent_scenario.lobby
+                
+                # Clear raced keys memory
+                if hasattr(lobby, '_raced_keys_recent'):
+                    lobby._raced_keys_recent.clear()
+                    logger_uma.debug("[CareerLoopAgent] Cleared raced keys memory")
+                
+                # Reset date state
+                if hasattr(lobby, 'state') and hasattr(lobby.state, 'date_info'):
+                    lobby.state.date_info = None
+                    logger_uma.debug("[CareerLoopAgent] Reset date info")
+                
+                # Reset last date key
+                if hasattr(lobby, '_last_date_key'):
+                    lobby._last_date_key = None
+                    logger_uma.debug("[CareerLoopAgent] Reset last date key")
+                
+                # Reset skip guard
+                if hasattr(lobby, '_skip_guard_key'):
+                    lobby._skip_guard_key = None
+                    logger_uma.debug("[CareerLoopAgent] Reset skip guard key")
+            
+            logger_uma.info("[CareerLoopAgent] Agent state reset complete")
+            
+        except Exception as e:
+            logger_uma.warning(
+                "[CareerLoopAgent] Error resetting agent state: %s (continuing anyway)",
+                str(e),
+            )
+
     def _handle_career_completion(self) -> bool:
         """
         Handle career completion flow and return to home screen.
@@ -726,6 +768,10 @@ class AgentCareerLoop:
                 logger_uma.warning("[CareerLoopAgent] Failed to handle skip dialog, continuing anyway")
                 # Continue even if skip handling fails
             
+            # Step 5b: Reset date state for new career
+            logger_uma.info("[CareerLoopAgent] Step 5b: Resetting date state for new career")
+            self._reset_agent_state()
+            
             # Run the agent scenario
             # The agent will run until the career is complete
             logger_uma.info("[CareerLoopAgent] Running agent scenario...")
@@ -950,6 +996,11 @@ class AgentCareerLoop:
             # Check if text contains "career" or "training"
             if "career" in text or "training" in text:
                 logger_uma.info(f"[CareerLoopAgent] Detected career_step with {text} text - already in career!")
+                
+                # Reset agent state before continuing the career
+                logger_uma.debug("[CareerLoopAgent] Resetting agent state before continuing career")
+                self._reset_agent_state()
+                
                 self.state.is_running = True
                 self.agent_scenario.run()
                 return True
