@@ -534,7 +534,7 @@ class AgentCareerLoop:
         1. Click "career_complete" button
         2. Click "finish" button
         3. Wait 5 seconds for results processing
-        4. Click "To Home", "Close", "Next" until ui_home is found
+        4. Click "To Home", "Close", "Next", "Cancel" until ui_home is found
            (avoiding "Edit Team" button)
         
         Returns:
@@ -609,7 +609,7 @@ class AgentCareerLoop:
                 # Try to click "To Home", "Close", "Next", "OK" buttons
                 clicked = self.waiter.click_when(
                     classes=["ui_home", "button_green", "button_white", "button_blue", "button_close"],
-                    texts=["home", "close", "next", "ok", "confirm"],
+                    texts=["home", "close", "next", "ok", "confirm", "cancel"],
                     threshold=0.68,
                     timeout_s=3.0,
                     tag=f"career_completion_nav_{clicks_count}",
