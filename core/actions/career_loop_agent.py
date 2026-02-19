@@ -28,7 +28,7 @@ from core.utils.waiter import Waiter
 
 
 class CareerLoopAgent:
-    """
+        """
     Top-level orchestrator that manages the complete career farming loop.
     
     This class coordinates the entire career automation workflow:
@@ -276,13 +276,14 @@ class CareerLoopAgent:
             from core.utils.yolo_objects import filter_by_classes as det_filter
             tp_dets = det_filter(dets, ["ui_tp"])
             white_buttons = det_filter(dets, ["button_white", "white_button"])
-            
+            use_carat = False
             if not tp_dets:
                 logger_uma.warning("[CareerLoopAgent] ui_tp not found, trying to use carat instead")
                 # Fallback to carat if TP not available
                 carat_dets = det_filter(dets, ["ui_carat"])
                 if carat_dets:
                     tp_dets = carat_dets
+                    use_carat = True
                 else:
                     logger_uma.error("[CareerLoopAgent] Neither ui_tp nor ui_carat found")
                     return False
@@ -355,6 +356,18 @@ class CareerLoopAgent:
             else:
                 logger_uma.error("[CareerLoopAgent] Could not find TP icon or white buttons")
                 return False
+            
+            if use_carat:
+                plus_button_clicked = self.waiter.click_when(
+                    classes=["button_plus"],
+                    threshold=0.68,
+                    timeout_s=3.0,
+                    tag="carat_restore_add"
+                )
+
+                if not plus_button_clicked:
+                    logger_uma.error("[CareerLoopAgent] Failed to click Plus Button")
+                    return False
             
             # Step 3: Click "OK" button (green button)
             logger_uma.debug("[CareerLoopAgent] Step 3: Clicking OK button")
@@ -471,6 +484,48 @@ class CareerLoopAgent:
             )
             return False
 
+    def _reset_agent_state(self) -> None:
+        """
+        Reset agent state for a new career.
+        
+        This clears date memory and other state that should not persist
+        between careers, ensuring each career starts fresh.
+        """
+        try:
+            logger_uma.debug("[CareerLoopAgent] Resetting agent state")
+            
+            # Reset date tracking in lobby
+            if hasattr(self.agent_scenario, 'lobby'):
+                lobby = self.agent_scenario.lobby
+                
+                # Clear raced keys memory
+                if hasattr(lobby, '_raced_keys_recent'):
+                    lobby._raced_keys_recent.clear()
+                    logger_uma.debug("[CareerLoopAgent] Cleared raced keys memory")
+                
+                # Reset date state
+                if hasattr(lobby, 'state') and hasattr(lobby.state, 'date_info'):
+                    lobby.state.date_info = None
+                    logger_uma.debug("[CareerLoopAgent] Reset date info")
+                
+                # Reset last date key
+                if hasattr(lobby, '_last_date_key'):
+                    lobby._last_date_key = None
+                    logger_uma.debug("[CareerLoopAgent] Reset last date key")
+                
+                # Reset skip guard
+                if hasattr(lobby, '_skip_guard_key'):
+                    lobby._skip_guard_key = None
+                    logger_uma.debug("[CareerLoopAgent] Reset skip guard key")
+            
+            logger_uma.info("[CareerLoopAgent] Agent state reset complete")
+            
+        except Exception as e:
+            logger_uma.warning(
+                "[CareerLoopAgent] Error resetting agent state: %s (continuing anyway)",
+                str(e),
+            )
+
     def _handle_career_completion(self) -> bool:
         """
         Handle career completion flow and return to home screen.
@@ -479,7 +534,7 @@ class CareerLoopAgent:
         1. Click "career_complete" button
         2. Click "finish" button
         3. Wait 5 seconds for results processing
-        4. Click "To Home", "Close", "Next" until ui_home is found
+        4. Click "To Home", "Close", "Next", "Cancel" until ui_home is found
            (avoiding "Edit Team" button)
         
         Returns:
@@ -554,7 +609,7 @@ class CareerLoopAgent:
                 # Try to click "To Home", "Close", "Next", "OK" buttons
                 clicked = self.waiter.click_when(
                     classes=["ui_home", "button_green", "button_white", "button_blue", "button_close"],
-                    texts=["home", "close", "next", "ok", "confirm"],
+                    texts=["home", "close", "next", "ok", "confirm", "cancel"],
                     threshold=0.68,
                     timeout_s=3.0,
                     tag=f"career_completion_nav_{clicks_count}",
@@ -592,6 +647,98 @@ class CareerLoopAgent:
             )
             return False
 
+    def _handle_failed_career(self) -> bool:
+        """
+        Check if white_button has "cancel" and green button has "try again"
+        Its mean the race is failed,
+        1. Click on white_button "cancel"
+        """
+
+        logger_uma.info("[CareerLoopAgent] Checking for failed career state")
+
+        try:
+            # Check for cancel and try again buttons
+            img, _, dets = self.yolo_engine.recognize(
+                imgsz=832,
+                conf=0.51,
+                iou=0.45,
+                tag="failed_career_check",
+                agent="career_loop",
+            )
+
+            from core.utils.yolo_objects import filter_by_classes as det_filter
+            cancel_button_dets = det_filter(dets, ["button_white"])
+            try_again_button_dets = det_filter(dets, ["button_green"])
+
+            # If both buttons are present, we have a failed career
+            if cancel_button_dets and try_again_button_dets:
+                logger_uma.info("[CareerLoopAgent] Detected failed career state")
+
+                # Click cancel button
+                self.waiter.click_when(
+                    classes=["button_white"],
+                    texts=["cancel"],
+                    threshold=0.68,
+                    timeout_s=2.0,
+                    tag="failed_career_cancel",
+                )
+
+                self.waiter.click_when(
+                    classes=["button_green"],
+                    texts=["next"],
+                    threshold=0.68,
+                    timeout_s=2.0,
+                    tag="failed_career_next",
+                )
+
+                self.waiter.click_when(
+                    classes=["button_green"],
+                    threshold=0.68,
+                    timeout_s=5.0,
+                    tag="failed_career_next_next",
+                )
+            else:
+                logger_uma.debug("[CareerLoopAgent] Not in failed career state")
+                return False
+
+        except Exception as e:
+            logger_uma.error(
+                "[CareerLoopAgent] Error checking for failed career: %s",
+                str(e),
+                exc_info=True,
+            )
+        return True
+    def _handle_new_day(self) -> bool:
+        """Handle new day detection and skip if needed.
+
+        This method checks if a new day has started and handles the skip logic
+        the bot will click the button_skip if it exist on the screen
+        Returns:
+            True if new day handled successfully or not detected, False if error occurs
+        """
+        logger_uma.info("[CareerLoopAgent] Checking for new day")
+
+        try:
+            
+            clicked_skip = self.waiter.click_when(
+                classes=["button_skip"],
+                timeout_s=2.0,
+                tag="career_start_skip_1",
+            )
+
+            if clicked_skip:
+                return True
+            else:
+                return False
+
+        except Exception as e:
+            logger_uma.error(
+                "[CareerLoopAgent] Error handling new day: %s",
+                str(e),
+                exc_info=True,
+            )
+            return False
+
     def _execute_career_cycle(self) -> bool:
         """
         Execute one complete career cycle.
@@ -616,6 +763,11 @@ class CareerLoopAgent:
         self.state.current_career_start_time = time.time()
         
         try:
+            #Check skip button
+            if self._handle_new_day():
+                logger_uma.info("[CareerLoopAgent] Pre-Step: New Day Checker - Clicked skip")
+                return True
+            self._handle_failed_career()
             #Check if in career mode
             if self._check_if_in_career():
                 logger_uma.info("[CareerLoopAgent] Pre-Step: Career checker - Already in career")
@@ -713,6 +865,10 @@ class CareerLoopAgent:
                 logger_uma.warning("[CareerLoopAgent] Failed to handle skip dialog, continuing anyway")
                 # Continue even if skip handling fails
             
+            # Step 5b: Reset date state for new career
+            logger_uma.info("[CareerLoopAgent] Step 5b: Resetting date state for new career")
+            self._reset_agent_state()
+            
             # Run the agent scenario
             # The agent will run until the career is complete
             logger_uma.info("[CareerLoopAgent] Running agent scenario...")
@@ -722,6 +878,8 @@ class CareerLoopAgent:
                 "[CareerLoopAgent] Agent scenario completed for career %d",
                 self.state.total_careers_completed + 1,
             )
+
+            self._handle_failed_career()
             
             # Step 6: Handle career completion and return to home
             logger_uma.info("[CareerLoopAgent] Step 6: Handling career completion")
@@ -926,9 +1084,22 @@ class CareerLoopAgent:
                 career_step_det.get("conf", 0.0),
             )
             
-            # Check if text contains "career"
+            # Check if text contains "complete" - this means career is finished
+            if "complete" in text:
+                logger_uma.debug(
+                    "[CareerLoopAgent] career_step text '%s' contains 'complete' - career is finished, not in active career",
+                    text,
+                )
+                return False
+            
+            # Check if text contains "career" or "training"
             if "career" in text or "training" in text:
                 logger_uma.info(f"[CareerLoopAgent] Detected career_step with {text} text - already in career!")
+                
+                # Reset agent state before continuing the career
+                logger_uma.debug("[CareerLoopAgent] Resetting agent state before continuing career")
+                self._reset_agent_state()
+                
                 self.state.is_running = True
                 self.agent_scenario.run()
                 return True

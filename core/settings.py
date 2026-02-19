@@ -531,6 +531,49 @@ class Settings:
                 cls.PRESET_OVERLAY_DURATION = max(1.0, float(adv.get("presetOverlaySeconds")))
             except Exception:
                 pass
+         # Career Loop Configuration
+        career_loop = adv.get("careerLoop", {}) or {}
+        cls.CAREER_LOOP_ENABLED = bool(career_loop.get("enabled", cls.CAREER_LOOP_ENABLED))
+        
+        max_careers = career_loop.get("maxCareers")
+        if max_careers is not None:
+            try:
+                cls.CAREER_LOOP_MAX_CAREERS = int(max_careers) if int(max_careers) > 0 else None
+            except (TypeError, ValueError):
+                pass
+        
+        preferred_support = career_loop.get("preferredSupport")
+        if preferred_support and isinstance(preferred_support, str):
+            cls.CAREER_LOOP_PREFERRED_SUPPORT = preferred_support.strip()
+        
+        preferred_level = career_loop.get("preferredLevel")
+        if preferred_level is not None:
+            try:
+                cls.CAREER_LOOP_PREFERRED_LEVEL = max(1, min(100, int(preferred_level)))
+            except (TypeError, ValueError):
+                pass
+        
+        max_refresh = career_loop.get("maxRefresh")
+        if max_refresh is not None:
+            try:
+                cls.CAREER_LOOP_MAX_REFRESH = max(0, min(20, int(max_refresh)))
+            except (TypeError, ValueError):
+                pass
+        
+        refresh_wait = career_loop.get("refreshWait")
+        if refresh_wait is not None:
+            try:
+                cls.CAREER_LOOP_REFRESH_WAIT = max(1.0, min(30.0, float(refresh_wait)))
+            except (TypeError, ValueError):
+                pass
+        
+        error_threshold = career_loop.get("errorThreshold")
+        if error_threshold is not None:
+            try:
+                cls.CAREER_LOOP_ERROR_THRESHOLD = max(1, min(20, int(error_threshold)))
+            except (TypeError, ValueError):
+                pass
+
         # Update training configuration
         undertrain_threshold = float(
             adv.get("undertrainThreshold", cls.UNDERTRAIN_THRESHOLD)
