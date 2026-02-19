@@ -647,6 +647,67 @@ class AgentCareerLoop:
             )
             return False
 
+    def _handle_failed_career(self) -> bool:
+        """
+        Check if white_button has "cancel" and green button has "try again"
+        Its mean the race is failed,
+        1. Click on white_button "cancel"
+        """
+
+        logger_uma.info("[CareerLoopAgent] Checking for failed career state")
+
+        try:
+            # Check for cancel and try again buttons
+            img, _, dets = self.yolo_engine.recognize(
+                imgsz=832,
+                conf=0.51,
+                iou=0.45,
+                tag="failed_career_check",
+                agent="career_loop",
+            )
+
+            from core.utils.yolo_objects import filter_by_classes as det_filter
+            cancel_button_dets = det_filter(dets, ["button_white"])
+            try_again_button_dets = det_filter(dets, ["button_green"])
+
+            # If both buttons are present, we have a failed career
+            if cancel_button_dets and try_again_button_dets:
+                logger_uma.info("[CareerLoopAgent] Detected failed career state")
+
+                # Click cancel button
+                self.waiter.click_when(
+                    classes=["button_white"],
+                    texts=["cancel"],
+                    threshold=0.68,
+                    timeout_s=2.0,
+                    tag="failed_career_cancel",
+                )
+
+                self.waiter.click_when(
+                    classes=["button_green"],
+                    texts=["next"],
+                    threshold=0.68,
+                    timeout_s=2.0,
+                    tag="failed_career_next",
+                )
+
+                self.waiter.click_when(
+                    classes=["button_green"],
+                    threshold=0.68,
+                    timeout_s=5.0,
+                    tag="failed_career_next_next",
+                )
+            else:
+                logger_uma.debug("[CareerLoopAgent] Not in failed career state")
+                return False
+
+        except Exception as e:
+            logger_uma.error(
+                "[CareerLoopAgent] Error checking for failed career: %s",
+                str(e),
+                exc_info=True,
+            )
+        return True
     def _handle_new_day(self) -> bool:
         """Handle new day detection and skip if needed.
 
@@ -666,6 +727,13 @@ class AgentCareerLoop:
             )
 
             if clicked_skip:
+                self.waiter.click_when(
+                    classes=["button_white"],
+                    texts=["close"],
+                    threshold=0.68,
+                    timeout_s=5.0,
+                    tag="career_start_skip_2",
+                )
                 return True
             else:
                 return False
@@ -706,6 +774,7 @@ class AgentCareerLoop:
             if self._handle_new_day():
                 logger_uma.info("[CareerLoopAgent] Pre-Step: New Day Checker - Clicked skip")
                 return True
+            self._handle_failed_career()
             #Check if in career mode
             if self._check_if_in_career():
                 logger_uma.info("[CareerLoopAgent] Pre-Step: Career checker - Already in career")
@@ -816,6 +885,8 @@ class AgentCareerLoop:
                 "[CareerLoopAgent] Agent scenario completed for career %d",
                 self.state.total_careers_completed + 1,
             )
+
+            self._handle_failed_career()
             
             # Step 6: Handle career completion and return to home
             logger_uma.info("[CareerLoopAgent] Step 6: Handling career completion")
