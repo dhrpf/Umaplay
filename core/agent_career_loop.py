@@ -647,6 +647,37 @@ class AgentCareerLoop:
             )
             return False
 
+    def _handle_new_day(self) -> bool:
+        """Handle new day detection and skip if needed.
+
+        This method checks if a new day has started and handles the skip logic
+        the bot will click the button_skip if it exist on the screen
+        Returns:
+            True if new day handled successfully or not detected, False if error occurs
+        """
+        logger_uma.info("[CareerLoopAgent] Checking for new day")
+
+        try:
+            
+            clicked_skip = self.waiter.click_when(
+                classes=["button_skip"],
+                timeout_s=2.0,
+                tag="career_start_skip_1",
+            )
+
+            if clicked_skip:
+                return True
+            else:
+                return False
+
+        except Exception as e:
+            logger_uma.error(
+                "[CareerLoopAgent] Error handling new day: %s",
+                str(e),
+                exc_info=True,
+            )
+            return False
+
     def _execute_career_cycle(self) -> bool:
         """
         Execute one complete career cycle.
@@ -671,6 +702,10 @@ class AgentCareerLoop:
         self.state.current_career_start_time = time.time()
         
         try:
+            #Check skip button
+            if self._handle_new_day():
+                logger_uma.info("[CareerLoopAgent] Pre-Step: New Day Checker - Clicked skip")
+                return True
             #Check if in career mode
             if self._check_if_in_career():
                 logger_uma.info("[CareerLoopAgent] Pre-Step: Career checker - Already in career")

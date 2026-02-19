@@ -39,6 +39,7 @@ runs
 datasets/coco8/**
 datasets/classifiers/**
 datasets/uma_nav/*
+datasets/_scrape_out
 models/base/*
 datasets/uma/*
 !datasets/uma/raw

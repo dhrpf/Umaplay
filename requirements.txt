@@ -30,6 +30,8 @@ Jinja2==3.1.6
 joblib==1.5.2
 # keyboard requires root on Linux, so it's Windows-only. pynput is used on Linux instead.
 keyboard==0.13.5 ; sys_platform == "win32"
+lxml==4.8.0
+beautifulsoup4==4.12.2
 mss==10.1.0
 kiwisolver==1.4.9
 MarkupSafe==3.0.3
