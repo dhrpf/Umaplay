@@ -208,6 +208,7 @@ def classify_screen_unity_cup(
         "pal": "lobby_pal",
         "button_change": "button_change",
         "race_badge": "race_badge",
+        "career_complete": "career_complete",
     }
 
     counts = Counter(d["name"] for d in dets)
