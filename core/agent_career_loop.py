@@ -668,10 +668,11 @@ class AgentCareerLoop:
 
             from core.utils.yolo_objects import filter_by_classes as det_filter
             cancel_button_dets = det_filter(dets, ["button_white"])
-            try_again_button_dets = det_filter(dets, ["button_green"])
+            green_button = det_filter(dets, ["button_green"])
+            pink_button = det_filter(dets, ["button_pink"])
 
             # If both buttons are present, we have a failed career
-            if cancel_button_dets and try_again_button_dets:
+            if cancel_button_dets and green_button:
                 logger_uma.info("[CareerLoopAgent] Detected failed career state")
 
                 # Click cancel button
@@ -679,7 +680,7 @@ class AgentCareerLoop:
                     classes=["button_white"],
                     texts=["cancel"],
                     threshold=0.68,
-                    timeout_s=2.0,
+                    timeout_s=10.0,
                     tag="failed_career_cancel",
                 )
 
@@ -687,15 +688,25 @@ class AgentCareerLoop:
                     classes=["button_green"],
                     texts=["next"],
                     threshold=0.68,
-                    timeout_s=2.0,
+                    timeout_s=10.0,
                     tag="failed_career_next",
                 )
 
                 self.waiter.click_when(
                     classes=["button_green"],
                     threshold=0.68,
-                    timeout_s=5.0,
+                    timeout_s=10.0,
                     tag="failed_career_next_next",
+                )
+            
+            # need more cases on this one
+            elif pink_button and green_button:
+                self.waiter.click_when(
+                    classes=["button_green"],
+                    texts=["next"],
+                    threshold=0.5,
+                    timeout_s=10.0,
+                    tag="failed_career_button_green_next",
                 )
             else:
                 logger_uma.debug("[CareerLoopAgent] Not in failed career state")
