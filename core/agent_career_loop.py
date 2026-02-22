@@ -1111,7 +1111,7 @@ class AgentCareerLoop:
                 return False
             
             # Check if text contains "career" or "training"
-            if "career" in text or "training" in text:
+            if "career" in text or "training" in text or "race" in text:
                 logger_uma.info(f"[CareerLoopAgent] Detected career_step with {text} text - already in career!")
                 
                 # Reset agent state before continuing the career
