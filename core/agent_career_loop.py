@@ -671,8 +671,24 @@ class AgentCareerLoop:
             green_button = det_filter(dets, ["button_green"])
             pink_button = det_filter(dets, ["button_pink"])
 
+            # read ocr from the buttons
+            cancel_button_text = ""
+            green_button_text = ""
+            pink_button_text = ""
+
+            if cancel_button_dets and self.ocr:
+                cancel_roi = crop_pil(img, cancel_button_dets[0]["xyxy"])
+                cancel_button_text = (
+                    self.ocr.text(cancel_roi, min_conf=0.2).lower().strip()
+                )
+            if green_button and self.ocr:
+                green_roi = crop_pil(img, green_button[0]["xyxy"])
+                green_button_text = (
+                    self.ocr.text(green_roi, min_conf=0.2).lower().strip()
+                )
+
             # If both buttons are present, we have a failed career
-            if cancel_button_dets and green_button:
+            if ("cancel" in cancel_button_text) and ("try again" in green_button_text):
                 logger_uma.info("[CareerLoopAgent] Detected failed career state")
 
                 # Click cancel button
@@ -698,9 +714,8 @@ class AgentCareerLoop:
                     timeout_s=10.0,
                     tag="failed_career_next_next",
                 )
-            
-            # need more cases on this one
-            elif pink_button and green_button:
+
+            elif pink_button and ("next" in green_button_text):
                 self.waiter.click_when(
                     classes=["button_green"],
                     texts=["next"],

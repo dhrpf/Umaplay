@@ -75,6 +75,12 @@ def main():
         description="Capture a frame and run YOLO (nav) detections for debugging."
     )
     parser.add_argument(
+        "--image",
+        type=str,
+        default=None,
+        help="Path to an image file to run detection on directly, bypassing the controller",
+    )
+    parser.add_argument(
         "--mode",
         choices=["steam", "bluestack", "scrcpy", "adb"],
         default=Settings.MODE,
@@ -140,10 +146,12 @@ def main():
     )
     args = parser.parse_args()
 
-    ctrl = _build_controller(args.mode, args.window_title)
-
-    # Focus the window (best-effort)
-    ctrl.focus()
+    if args.image:
+        ctrl = None  # Controller not needed for direct image detection
+    else:
+        ctrl = _build_controller(args.mode, args.window_title)
+        # Focus the window (best-effort)
+        ctrl.focus()
 
     # Resolve weights & thresholds based on yolo-config if not explicitly provided
     auto_weights = (
@@ -167,14 +175,27 @@ def main():
     else :
         engine = LocalYOLOEngine(ctrl=ctrl, weights=weights_path)
 
-    # Recognize (engine will decide special-cases like Steam left-half)
-    img, meta, dets = engine.recognize(
-        imgsz=args.imgsz, conf=conf_thr, iou=args.iou, tag=args.tag
-    )
+    if args.image:
+        img_path = Path(args.image).resolve()
+        if not img_path.exists():
+            print(f"Error: Image not found at {img_path}")
+            return
+        img = Image.open(img_path).convert("RGB")
+        meta, dets = engine.detect_pil(
+            img, imgsz=args.imgsz, conf=conf_thr, iou=args.iou, tag=args.tag
+        )
+    else:
+        # Recognize (engine will decide special-cases like Steam left-half)
+        img, meta, dets = engine.recognize(
+            imgsz=args.imgsz, conf=conf_thr, iou=args.iou, tag=args.tag
+        )
 
     # Print a concise report
     print("=== CaptureNavDebug ===")
-    print(f"Mode: {args.mode} | Window: {ctrl.window_title}")
+    if args.image:
+        print(f"Mode: image | File: {args.image}")
+    else:
+        print(f"Mode: {args.mode} | Window: {ctrl.window_title}")
     print(f"YOLO config: {args.yolo_config} | Weights: {weights_path}")
     print(f"imgsz={meta.get('imgsz')} conf={meta.get('conf')} iou={meta.get('iou')}")
     print(f"Detections: {len(dets)}")
