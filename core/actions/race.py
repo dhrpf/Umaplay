@@ -906,6 +906,13 @@ class RaceFlow:
             clicked_try_again = self._attempt_try_again_retry()
         elif loss_indicator_seen:
             self._race_result_counters["retry_skipped"] += 1
+            if getattr(Settings, "CAREER_LOOP_ENABLED", False):
+                logger_uma.info(
+                    "[race] Retry disabled via settings but CAREER_LOOP_ENABLED is active. Continuing flow so career fails naturally. | counters=%s",
+                    self._race_result_counters,
+                )
+                return False
+
             logger_uma.info(
                 "[race] Retry disabled via settings despite loss indicator | counters=%s",
                 self._race_result_counters,

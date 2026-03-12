@@ -700,6 +700,7 @@ class AgentCareerLoop:
                     tag="failed_career_cancel",
                 )
 
+                time.sleep(1.0)
                 self.waiter.click_when(
                     classes=["button_green"],
                     texts=["next"],
@@ -708,11 +709,21 @@ class AgentCareerLoop:
                     tag="failed_career_next",
                 )
 
+                time.sleep(1.0)
                 self.waiter.click_when(
                     classes=["button_green"],
                     threshold=0.68,
                     timeout_s=10.0,
                     tag="failed_career_next_next",
+                )
+
+                time.sleep(1.0)
+                self.waiter.click_when(
+                    classes=["button_green"],
+                    texts=["next"],
+                    threshold=0.68,
+                    timeout_s=10.0,
+                    tag="failed_career_next_final",
                 )
 
             elif pink_button and ("next" in green_button_text):

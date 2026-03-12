@@ -61,10 +61,10 @@ def scan_training_screen(
             a, b = float(pause_after_click_range[0]), float(pause_after_click_range[1])
             lo, hi = (a, b) if a <= b else (b, a)
             return max(0.0, random.uniform(lo, hi))
-        return 0.6
+        return 0.2
 
     # -------- 1) Initial capture, wait for button training animations --------
-    time.sleep(0.3)
+    time.sleep(0.2)
     cur_img, _, cur_parsed = yolo_engine.recognize(
         imgsz=param_imgsz, conf=param_conf, iou=param_iou, tag="training"
     )
@@ -218,6 +218,7 @@ def scan_training_screen(
         )
 
         time.sleep(_jitter_delay())
+        time.sleep(0.1)
 
         # Recapture once
         cur_img, _, cur_parsed = yolo_engine.recognize(
