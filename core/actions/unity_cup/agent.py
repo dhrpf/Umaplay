@@ -106,6 +106,7 @@ class AgentUnityCup(AgentScenario):
     def run(self, *, delay: float = 0.4, max_iterations: int | None = None) -> None:
         self.ctrl.focus()
         self.is_running = True
+        self._event_screen_first_seen: float = 0.0
 
         # Ensure memory metadata is aligned at the start of a run
         self._refresh_skill_memory()
@@ -139,6 +140,23 @@ class AgentUnityCup(AgentScenario):
             unknown_screen = screen.lower() == "unknown"
 
             self._tick_planned_skip_release()
+
+            # ── Event screen 30-second timeout guard ──
+            if screen in ("Event", "EventStale"):
+                if self._event_screen_first_seen == 0.0:
+                    self._event_screen_first_seen = time.time()
+                elif time.time() - self._event_screen_first_seen > 30.0:
+                    logger_uma.warning(
+                        "[event] Stuck on %s screen for >30s. Clicking top-center to unstick.",
+                        screen,
+                    )
+                    cx = int(img.width * 0.5)
+                    cy = int(img.height * 0.1)
+                    self.ctrl.click(cx, cy, clicks=1)
+                    self._event_screen_first_seen = time.time()
+                    continue
+            else:
+                self._event_screen_first_seen = 0.0
 
             # Check if we need to force unknown behavior (EventStale loop breaker)
             if self._force_unknown_once:
@@ -177,7 +195,7 @@ class AgentUnityCup(AgentScenario):
                         "race_after_next",
                         "button_white",
                     ),  # improve the model. TODO: add text exception for this function
-                    texts=("NEXT", "OK", "CLOSE", "PROCEED", "CANCEL"),
+                    texts=("NEXT", "OK", "CLOSE", "PROCEED", "CANCEL", "BACK"),
                     prefer_bottom=False,
                     allow_greedy_click=False,
                     forbid_texts=("complete", "career", "RACE", "try again"),
@@ -189,7 +207,7 @@ class AgentUnityCup(AgentScenario):
                 else:
                     self.patience += 1
 
-                    if self.patience > 10 == 0:
+                    if self.patience % 10 == 0:
                         # try single clean click
                         screen_width = img.width
                         screen_height = img.height
